@@ -109,6 +109,31 @@ for (const r of recipes) {
   r.perServing = Object.fromEntries(Object.entries(tot).map(([k, v]) => [k, Math.round(v / r.servings)]));
 }
 
+// ---------- Αγγλικά (data/en/*.txt) ----------
+const enDir = path.join(root, 'data', 'en');
+const lines = f => fs.readFileSync(path.join(enDir, f), 'utf8').split(/\r?\n/).map(s => s.trim()).filter(s => s && !s.startsWith('#'));
+const pairs = f => Object.fromEntries(lines(f).map(s => { const k = s.indexOf(' = '); return [s.slice(0, k).trim(), s.slice(k + 3).trim()]; }));
+const enFood = Object.fromEntries(lines('foods.txt').map(s => { const [id, ...n] = s.split('|'); return [Number(id), n.join('|').trim()]; }));
+const enPortion = pairs('portions.txt'), enCat = pairs('categories.txt');
+for (const f of foods) {
+  if (!enFood[f.id]) errors.push(`EN: λείπει το τρόφιμο ${f.id} ${f.name}`);
+  f.en = enFood[f.id];
+  for (const p of f.portions) { if (!enPortion[p.name]) errors.push(`EN: λείπει η μερίδα «${p.name}»`); p.en = enPortion[p.name]; }
+  if (!enCat[f.cat]) errors.push(`EN: λείπει η κατηγορία «${f.cat}»`);
+}
+let enRec = null;
+for (const s of lines('recipes.txt')) {
+  if (s.startsWith('=')) { const [id, ...n] = s.slice(1).split('|'); enRec = recipes.find(r => r.id === Number(id)); if (!enRec) { errors.push(`EN: άγνωστη συνταγή ${id}`); continue; } enRec.en = { name: n.join('|').trim(), steps: [], notes: [] }; }
+  else if (enRec && s.startsWith('- ')) enRec.en.steps.push(s.slice(2));
+  else if (enRec && s.startsWith('! ')) enRec.en.notes.push(s.slice(2));
+}
+for (const r of recipes) {
+  if (!r.en) { errors.push(`EN: λείπει η συνταγή ${r.id} ${r.name}`); continue; }
+  if (r.en.steps.length !== r.steps.length || r.en.notes.length !== r.notes.length) errors.push(`EN: η συνταγή ${r.id} έχει διαφορετικό πλήθος βημάτων/σημειώσεων`);
+  if (!enCat[r.cat]) errors.push(`EN: λείπει η κατηγορία συνταγής «${r.cat}»`);
+}
+fs.writeFileSync(path.join(root, 'data', 'i18n.json'), JSON.stringify({ cats: enCat }));
+
 if (errors.length) { console.error('ΛΑΘΗ:\n' + errors.join('\n')); process.exit(1); }
 if (warnings.length) console.log(`Προειδοποιήσεις (${warnings.length}):\n` + warnings.join('\n'));
 

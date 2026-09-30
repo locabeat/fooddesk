@@ -1,0 +1,326 @@
+<<<<
+  el.title = 'Δεν στάλθηκαν ακόμα στο Sheet · θα σταλούν μόλις υπάρξει internet';
+====
+  el.title = T('Δεν στάλθηκαν ακόμα στο Sheet · θα σταλούν μόλις υπάρξει internet', 'Not sent to the Sheet yet · will be sent when online');
+>>>>
+<<<<
+    toast(`Πρώτη φορά: στήνω το Sheet σου… ${label} ${Math.min(i + 150, rows.length)}/${rows.length} ⏳`);
+====
+    toast(T(`Πρώτη φορά: στήνω το Sheet σου… ${label} `, `First time: setting up your Sheet… `) + `${Math.min(i + 150, rows.length)}/${rows.length} ⏳`);
+>>>>
+<<<<
+    if (e.message === 'Λάθος PIN') { logout(); toast('Λάθος PIN'); }
+    else toast(e.message === 'Δεν υπάρχει σύνδεση' ? '📴 Χωρίς internet · βλέπεις τα τελευταία δεδομένα' : e.message);
+====
+    if (e.message === 'Λάθος PIN') { logout(); toast(errText('Λάθος PIN')); }
+    else toast(e.message === 'Δεν υπάρχει σύνδεση' ? T('📴 Χωρίς internet · βλέπεις τα τελευταία δεδομένα', '📴 Offline · showing your latest data') : errText(e.message));
+>>>>
+<<<<
+  $$('.tabbar [data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === ui.tab));
+  const v = $('#view');
+====
+  $$('.tabbar [data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === ui.tab));
+  const labels = { today: T('Σήμερα', 'Today'), recipes: T('Συνταγές', 'Recipes'), plan: T('Πρόγραμμα', 'Plan'), settings: T('Ρυθμίσεις', 'Settings') };
+  $$('.tabbar [data-label]').forEach(s => { s.textContent = labels[s.dataset.label]; });
+  document.documentElement.lang = LANG;
+  const v = $('#view');
+>>>>
+<<<<
+  return `<div class="ring" role="img" aria-label="${fmt(eaten)} από ${fmt(goal)} θερμίδες">
+====
+  return `<div class="ring" role="img" aria-label="${fmt(eaten)} ${T('από', 'of')} ${fmt(goal)} ${T('θερμίδες', 'calories')}">
+>>>>
+<<<<
+    <div class="ring-center"><b>${fmt(eaten)}</b><span>από ${fmt(goal)} kcal</span></div>
+====
+    <div class="ring-center"><b>${fmt(eaten)}</b><span>${T('από', 'of')} ${fmt(goal)} kcal</span></div>
+>>>>
+<<<<
+  const statusText = st === 'over' ? `Πέρασες τον στόχο κατά ${fmt(-left)} kcal` : `Σου μένουν ${fmt(left)} kcal`;
+====
+  const statusText = st === 'over' ? T(`Πέρασες τον στόχο κατά ${fmt(-left)} kcal`, `${fmt(-left)} kcal over your goal`) : T(`Σου μένουν ${fmt(left)} kcal`, `${fmt(left)} kcal left`);
+>>>>
+<<<<
+      <button class="icon-btn" id="dPrev" aria-label="Προηγούμενη μέρα">
+====
+      <button class="icon-btn" id="dPrev" aria-label="${T('Προηγούμενη μέρα', 'Previous day')}">
+>>>>
+<<<<
+      <button class="icon-btn" id="dNext" aria-label="Επόμενη μέρα" ${isToday ? 'disabled' : ''}>
+====
+      <button class="icon-btn" id="dNext" aria-label="${T('Επόμενη μέρα', 'Next day')}" ${isToday ? 'disabled' : ''}>
+>>>>
+<<<<
+          <div class="muted small">${fmt(t.kcal)} / ${fmt(goal)} θερμίδες ${isToday ? 'για σήμερα' : ''}</div>
+          <div class="macros">
+            <div class="macro"><b>${fmt(t.p)}γρ.</b><span>Πρωτεΐνη</span></div>
+            <div class="macro"><b>${fmt(t.c)}γρ.</b><span>Υδατάνθ.</span></div>
+            <div class="macro"><b>${fmt(t.f)}γρ.</b><span>Λιπαρά</span></div>
+          </div>
+====
+          <div class="muted small">${fmt(t.kcal)} / ${fmt(goal)} ${T('θερμίδες', 'calories')} ${isToday ? T('για σήμερα', 'today') : ''}</div>
+          ${macrosHtml(t)}
+>>>>
+<<<<
+        <div><b>💧 Νερό</b><div class="muted small">${glasses} / ${wGoal} ποτήρια · ${(glasses * GLASS_ML / 1000).toLocaleString('el-GR')} λίτρα</div></div>
+        <button class="btn small" id="wMinus" aria-label="Ένα ποτήρι λιγότερο" ${glasses ? '' : 'disabled'}>−</button>
+        <button class="btn small primary" id="wPlus">+ ποτήρι</button>
+====
+        <div><b>💧 ${T('Νερό', 'Water')}</b><div class="muted small">${glasses} / ${wGoal} ${T('ποτήρια', 'glasses')} · ${(glasses * GLASS_ML / 1000).toLocaleString(LOCALE())} ${T('λίτρα', 'litres')}</div></div>
+        <button class="btn small" id="wMinus" aria-label="${T('Ένα ποτήρι λιγότερο', 'One glass less')}" ${glasses ? '' : 'disabled'}>−</button>
+        <button class="btn small primary" id="wPlus">${T('+ ποτήρι', '+ glass')}</button>
+>>>>
+<<<<
+ data-g="${i + 1}" aria-label="${i + 1} ποτήρια"></button>
+====
+ data-g="${i + 1}" aria-label="${i + 1} ${T('ποτήρια', 'glasses')}"></button>
+>>>>
+<<<<
+        <div class="meal-head"><h3>${m.icon} ${m.name}</h3><span>${es.length ? fmt(mt.kcal) + ' kcal' : ''}
+          ${es.length ? `<button class="mini-btn" data-combo="${m.key}" title="Αποθήκευσε ως συνδυασμό">🍱 Συνδυασμός</button>` : ''}</span></div>
+====
+        <div class="meal-head"><h3>${m.icon} ${mealName(m)}</h3><span>${es.length ? fmt(mt.kcal) + ' kcal' : ''}
+          ${es.length ? `<button class="mini-btn" data-combo="${m.key}" title="${T('Αποθήκευσε ως συνδυασμό', 'Save as combo')}">🍱 ${T('Συνδυασμός', 'Combo')}</button>` : ''}</span></div>
+>>>>
+<<<<
+          <button class="add-meal" data-meal="${m.key}">+ Πρόσθεσε στο ${m.name.toLowerCase()}</button>
+          ${prev.length ? `<button class="add-meal again" data-again="${m.key}">🔁 Όπως χθες · ${fmt(totals(prev).kcal)} kcal</button>` : ''}
+====
+          <button class="add-meal" data-meal="${m.key}">${T(`+ Πρόσθεσε στο ${m.name.toLowerCase()}`, `+ Add to ${m.en.toLowerCase()}`)}</button>
+          ${prev.length ? `<button class="add-meal again" data-again="${m.key}">🔁 ${T('Όπως χθες', 'Same as yesterday')} · ${fmt(totals(prev).kcal)} kcal</button>` : ''}
+>>>>
+<<<<
+    addItems(prev, b.dataset.again, day, `Όπως χθες: +${fmt(totals(prev).kcal)} kcal ✓`);
+====
+    addItems(prev, b.dataset.again, day, `${T('Όπως χθες', 'Same as yesterday')}: +${fmt(totals(prev).kcal)} kcal ✓`);
+>>>>
+<<<<
+  const body = openSheet(combo ? 'Συνδυασμός' : 'Νέος συνδυασμός');
+====
+  const body = openSheet(combo ? T('Συνδυασμός', 'Combo') : T('Νέος συνδυασμός', 'New combo'));
+>>>>
+<<<<
+    <p class="muted small" style="margin-top:4px">Με ένα πάτημα θα προσθέτεις όλα αυτά μαζί.</p>
+    <div class="list">${items.map(e => `<div class="item"><span class="ico">${entryIcon(e)}</span><span class="txt"><b>${esc(e.name)}</b><small>${esc(e.kind === 'quick' ? 'στο περίπου' : qtyLabel(e))}</small></span><span class="kcal">${fmt(e.kcal)} <small>kcal</small></span></div>`).join('')}</div>
+    <label class="field"><span>Όνομα</span><input id="cName" value="${esc(combo?.name || '')}" placeholder="π.χ. Το πρωινό μου"></label>
+====
+    <p class="muted small" style="margin-top:4px">${T('Με ένα πάτημα θα προσθέτεις όλα αυτά μαζί.', 'One tap will add all of these together.')}</p>
+    <div class="list">${items.map(e => `<div class="item"><span class="ico">${entryIcon(e)}</span><span class="txt"><b>${esc(entryName(e))}</b><small>${esc(e.kind === 'quick' ? T('στο περίπου', 'estimate') : qtyLabel(e))}</small></span><span class="kcal">${fmt(e.kcal)} <small>kcal</small></span></div>`).join('')}</div>
+    <label class="field"><span>${T('Όνομα', 'Name')}</span><input id="cName" value="${esc(combo?.name || '')}" placeholder="${T('π.χ. Το πρωινό μου', 'e.g. My breakfast')}"></label>
+>>>>
+<<<<
+    <div class="actions">${combo ? '<button class="btn danger" id="cDel">Διαγραφή</button>' : ''}<button class="btn primary" id="cSave">Αποθήκευση · ${fmt(totals(items).kcal)} kcal</button></div>`;
+====
+    <div class="actions">${combo ? `<button class="btn danger" id="cDel">${T('Διαγραφή', 'Delete')}</button>` : ''}<button class="btn primary" id="cSave">${T('Αποθήκευση', 'Save')} · ${fmt(totals(items).kcal)} kcal</button></div>`;
+>>>>
+<<<<
+    if (!name) return toast('Δώσε ένα όνομα');
+====
+    if (!name) return toast(T('Δώσε ένα όνομα', 'Give it a name'));
+>>>>
+<<<<
+    save(); closeSheet(); render(); toast('Ο συνδυασμός αποθηκεύτηκε ✓');
+====
+    save(); closeSheet(); render(); toast(T('Ο συνδυασμός αποθηκεύτηκε ✓', 'Combo saved ✓'));
+>>>>
+<<<<
+    toast('Διαγράφηκε', () => { data.combos.push(combo); save(); push('combos', [comboRowOut(combo)]); render(); });
+====
+    toast(T('Διαγράφηκε', 'Deleted'), () => { data.combos.push(combo); save(); push('combos', [comboRowOut(combo)]); render(); });
+>>>>
+<<<<
+function qtyLabel(e) {
+  if (e.unit === 'γρ') return `${fmt(e.g)} γρ.`;
+  if (e.kind === 'recipe') return `${fmtQty(e.qty)} ${e.qty === 1 ? 'μερίδα' : 'μερίδες'}`;
+  return e.qty === 1 ? e.unit : `${fmtQty(e.qty)} × ${e.unit}`;
+}
+function entryRow(e) {
+  return `<button class="item" data-entry="${e.id}">
+    <span class="ico">${entryIcon(e)}</span>
+    <span class="txt"><b>${esc(e.name)}</b><small>${e.kind === 'quick' ? 'στο περίπου' : esc(qtyLabel(e))}</small></span>
+====
+function qtyLabel(e) {
+  if (e.unit === 'γρ') return `${fmt(e.g)} ${G()}`;
+  if (e.kind === 'recipe') return `${fmtQty(e.qty)} ${e.qty === 1 ? T('μερίδα', 'serving') : T('μερίδες', 'servings')}`;
+  const unit = portionName(foodById(e.ref), e.unit);
+  return e.qty === 1 ? unit : `${fmtQty(e.qty)} × ${unit}`;
+}
+// Όνομα καταγραφής στη γλώσσα που έχεις διαλέξει (αν υπάρχει ακόμα το τρόφιμο/η συνταγή).
+function entryName(e) {
+  if (e.kind === 'food') { const f = foodById(e.ref); return f ? foodName(f) : e.name; }
+  if (e.kind === 'recipe') { const r = recipeById(e.ref); return r ? recipeName(r) : e.name; }
+  return e.name;
+}
+function macrosHtml(n) {
+  return `<div class="macros"><div class="macro"><b>${fmt(n.p)}${G()}</b><span>${T('Πρωτεΐνη', 'Protein')}</span></div><div class="macro"><b>${fmt(n.c)}${G()}</b><span>${T('Υδατάνθ.', 'Carbs')}</span></div><div class="macro"><b>${fmt(n.f)}${G()}</b><span>${T('Λιπαρά', 'Fat')}</span></div></div>`;
+}
+function entryRow(e) {
+  return `<button class="item" data-entry="${e.id}">
+    <span class="ico">${entryIcon(e)}</span>
+    <span class="txt"><b>${esc(entryName(e))}</b><small>${e.kind === 'quick' ? T('στο περίπου', 'estimate') : esc(qtyLabel(e))}</small></span>
+>>>>
+<<<<
+  const body = openSheet('Τι έφαγες;');
+====
+  const body = openSheet(T('Τι έφαγες;', 'What did you eat?'));
+>>>>
+<<<<
+    <div class="seg" id="aMeal">${MEALS.map(m => `<button data-m="${m.key}">${m.icon} ${m.name}</button>`).join('')}</div>
+    <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="aQ" type="search" placeholder="Ψάξε, π.χ. φέτα, τοστ, καπουτσίνο…" autocomplete="off"></label>
+====
+    <div class="seg" id="aMeal">${MEALS.map(m => `<button data-m="${m.key}">${m.icon} ${mealName(m)}</button>`).join('')}</div>
+    <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="aQ" type="search" placeholder="${T('Ψάξε, π.χ. φέτα, τοστ, καπουτσίνο…', 'Search, e.g. feta, toastie, cappuccino…')}" autocomplete="off"></label>
+>>>>
+<<<<
+      <button class="btn" id="aQuick">✍️ Στο περίπου</button>
+      <button class="btn" id="aNew">➕ Νέο τρόφιμο</button>
+====
+      <button class="btn" id="aQuick">✍️ ${T('Στο περίπου', 'Estimate')}</button>
+      <button class="btn" id="aNew">➕ ${T('Νέο τρόφιμο', 'New food')}</button>
+>>>>
+<<<<
+  const cats = ['⭐ Για σένα', '📖 Συνταγές', ...Object.keys(CAT_ICONS)];
+  $('#aCats', body).innerHTML = cats.map((c, i) => `<button class="chip" data-c="${i}">${i > 1 ? CAT_ICONS[c] + ' ' : ''}${esc(c)}</button>`).join('');
+====
+  const cats = ['⭐ Για σένα', '📖 Συνταγές', ...Object.keys(CAT_ICONS)];
+  const catLabel = (c, i) => i === 0 ? T('⭐ Για σένα', '⭐ For you') : i === 1 ? T('📖 Συνταγές', '📖 Recipes') : `${CAT_ICONS[c]} ${catName(c)}`;
+  $('#aCats', body).innerHTML = cats.map((c, i) => `<button class="chip" data-c="${i}">${esc(catLabel(c, i))}</button>`).join('');
+>>>>
+<<<<
+      const match = name => { const n = fold(name); return words.every(w => n.includes(w)); };
+      const recs = RECIPES.filter(r => match(r.name)).slice(0, 8);
+      // Πρώτα όσα ξεκινάνε με τη λέξη, μετά τα υπόλοιπα.
+      const foods = FOODS.filter(f => f.use !== 'Υ' && match(f.name))
+        .sort((a, b) => (fold(b.name).startsWith(words[0]) - fold(a.name).startsWith(words[0])) || a.name.length - b.name.length).slice(0, 40);
+      if (recs.length) html += `<div class="section-label">Οι συνταγές σου</div><div class="list">${recs.map(recRow).join('')}</div>`;
+      if (foods.length) html += `<div class="section-label">Τρόφιμα</div><div class="list">${foods.map(foodRow).join('')}</div>`;
+      if (!html) html = `<div class="empty">Δεν βρέθηκε «${esc(st.q)}».<br>Γράψ' το στο περίπου από κάτω 👇</div>`;
+====
+      // Ψάχνει και στα ελληνικά και στα αγγλικά ονόματα.
+      const match = (...names) => names.some(name => { if (!name) return false; const n = fold(name); return words.every(w => n.includes(w)); });
+      const recs = RECIPES.filter(r => match(r.name, r.en?.name)).slice(0, 8);
+      // Πρώτα όσα ξεκινάνε με τη λέξη, μετά τα υπόλοιπα.
+      const shown = f => fold(foodName(f));
+      const foods = FOODS.filter(f => f.use !== 'Υ' && match(f.name, f.en))
+        .sort((a, b) => (shown(b).startsWith(words[0]) - shown(a).startsWith(words[0])) || foodName(a).length - foodName(b).length).slice(0, 40);
+      if (recs.length) html += `<div class="section-label">${T('Οι συνταγές σου', 'Your recipes')}</div><div class="list">${recs.map(recRow).join('')}</div>`;
+      if (foods.length) html += `<div class="section-label">${T('Τρόφιμα', 'Foods')}</div><div class="list">${foods.map(foodRow).join('')}</div>`;
+      if (!html) html = T(`<div class="empty">Δεν βρέθηκε «${esc(st.q)}».<br>Γράψ' το στο περίπου από κάτω 👇</div>`, `<div class="empty">Nothing found for “${esc(st.q)}”.<br>Log it as an estimate below 👇</div>`);
+>>>>
+<<<<
+      if (data.combos.length) html += `<div class="section-label">🍱 Συνδυασμοί · ένα πάτημα</div><div class="combo-grid">${data.combos.map(c =>
+====
+      if (data.combos.length) html += `<div class="section-label">🍱 ${T('Συνδυασμοί · ένα πάτημα', 'Combos · one tap')}</div><div class="combo-grid">${data.combos.map(c =>
+>>>>
+<<<<
+      if (favs.length) html += `<div class="section-label">⭐ Αγαπημένα</div><div class="list">${favs.join('')}</div>`;
+      if (rec.length) html += `<div class="section-label">🕒 Πρόσφατα</div><div class="list">${rec.join('')}</div>`;
+      if (!html) html = `<div class="empty">Εδώ θα βλέπεις τα αγαπημένα σου ⭐, ό,τι γράφεις συχνά και τους συνδυασμούς σου 🍱.<br>Ψάξε κάτι από πάνω ή διάλεξε κατηγορία.</div>`;
+====
+      if (favs.length) html += `<div class="section-label">⭐ ${T('Αγαπημένα', 'Favourites')}</div><div class="list">${favs.join('')}</div>`;
+      if (rec.length) html += `<div class="section-label">🕒 ${T('Πρόσφατα', 'Recent')}</div><div class="list">${rec.join('')}</div>`;
+      if (!html) html = T(`<div class="empty">Εδώ θα βλέπεις τα αγαπημένα σου ⭐, ό,τι γράφεις συχνά και τους συνδυασμούς σου 🍱.<br>Ψάξε κάτι από πάνω ή διάλεξε κατηγορία.</div>`,
+        `<div class="empty">Your favourites ⭐, frequent foods and combos 🍱 will show up here.<br>Search above or pick a category.</div>`);
+>>>>
+<<<<
+    <span class="txt"><b>${esc(f.name)}${isFav('food:' + f.id) ? ' ⭐' : ''}${f.custom ? ' <em class="tag">δικό μου</em>' : f.edited ? ' <em class="tag">διορθωμένο</em>' : ''}</b><small>${esc(p.name)} · ${fmt(f.kcal * p.g / 100)} kcal</small></span></button>`;
+====
+    <span class="txt"><b>${esc(foodName(f))}${isFav('food:' + f.id) ? ' ⭐' : ''}${f.custom ? ` <em class="tag">${T('δικό μου', 'mine')}</em>` : f.edited ? ` <em class="tag">${T('διορθωμένο', 'edited')}</em>` : ''}</b><small>${esc(portionName(f, p.name))} · ${fmt(f.kcal * p.g / 100)} kcal</small></span></button>`;
+>>>>
+<<<<
+    <span class="txt"><b>${esc(r.name)}${isFav('recipe:' + r.id) ? ' ⭐' : ''}</b><small>1 μερίδα · ${fmt(r.perServing.kcal)} kcal</small></span></button>`;
+====
+    <span class="txt"><b>${esc(recipeName(r))}${isFav('recipe:' + r.id) ? ' ⭐' : ''}</b><small>${T('1 μερίδα', '1 serving')} · ${fmt(r.perServing.kcal)} kcal</small></span></button>`;
+>>>>
+<<<<
+  const body = openSheet(isRec ? `${recipe.icon} ${recipe.name}` : food.name);
+====
+  const body = openSheet(isRec ? `${recipe.icon} ${recipeName(recipe)}` : foodName(food));
+>>>>
+<<<<
+      <button class="mini-btn" id="pFav">${isFav(favKey) ? '⭐ Στα αγαπημένα' : '☆ Αγαπημένο'}</button>
+      ${isRec ? '' : `<button class="mini-btn" id="pEdit">✏️ Διόρθωση τροφίμου</button>`}
+    </div>
+    ${units.length > 1 ? `<div class="chips" id="pUnits">${units.map((u, i) => `<button class="chip" data-u="${i}">${u.name === 'γρ' ? 'γραμμάρια' : esc(u.name)}${u.g && u.name !== 'γρ' ? `<small>${u.g}γρ.</small>` : ''}</button>`).join('')}</div>` : ''}
+    <div class="stepper"><button id="pMinus" aria-label="Λιγότερο">−</button><input id="pQty" inputmode="decimal"><span class="unit" id="pUnit"></span><button id="pPlus" aria-label="Περισσότερο">+</button></div>
+====
+      <button class="mini-btn" id="pFav">${favLabel(isFav(favKey))}</button>
+      ${isRec ? '' : `<button class="mini-btn" id="pEdit">✏️ ${T('Διόρθωση τροφίμου', 'Edit food')}</button>`}
+    </div>
+    ${units.length > 1 ? `<div class="chips" id="pUnits">${units.map((u, i) => `<button class="chip" data-u="${i}">${u.name === 'γρ' ? T('γραμμάρια', 'grams') : esc(portionName(food, u.name))}${u.g && u.name !== 'γρ' ? `<small>${u.g}${G()}</small>` : ''}</button>`).join('')}</div>` : ''}
+    <div class="stepper"><button id="pMinus" aria-label="${T('Λιγότερο', 'Less')}">−</button><input id="pQty" inputmode="decimal"><span class="unit" id="pUnit"></span><button id="pPlus" aria-label="${T('Περισσότερο', 'More')}">+</button></div>
+>>>>
+<<<<
+    <label class="field"><span>Γεύμα</span><div class="seg" id="pMeal">${MEALS.map(m => `<button data-m="${m.key}">${m.icon} ${m.name}</button>`).join('')}</div></label>
+    ${isRec ? `<button class="btn block" id="pRec">📖 Δες τη συνταγή</button>` : ''}
+    <div class="actions">
+      ${entry ? '<button class="btn danger" id="pDel">Διαγραφή</button>' : ''}
+      <button class="btn primary" id="pSave">${entry ? 'Αποθήκευση' : 'Πρόσθεσε'}</button>
+====
+    <label class="field"><span>${T('Γεύμα', 'Meal')}</span><div class="seg" id="pMeal">${MEALS.map(m => `<button data-m="${m.key}">${m.icon} ${mealName(m)}</button>`).join('')}</div></label>
+    ${isRec ? `<button class="btn block" id="pRec">📖 ${T('Δες τη συνταγή', 'View recipe')}</button>` : ''}
+    <div class="actions">
+      ${entry ? `<button class="btn danger" id="pDel">${T('Διαγραφή', 'Delete')}</button>` : ''}
+      <button class="btn primary" id="pSave">${entry ? T('Αποθήκευση', 'Save') : T('Πρόσθεσε', 'Add')}</button>
+>>>>
+<<<<
+    $('#pUnit', body).textContent = u.name === 'γρ' ? 'γρ.' : st.qty === 1 ? '' : '×';
+    const n = calc();
+    $('#pKcal', body).textContent = fmt(n.kcal);
+    $('#pMac', body).innerHTML = `<div class="macro"><b>${fmt(n.p)}γρ.</b><span>Πρωτεΐνη</span></div><div class="macro"><b>${fmt(n.c)}γρ.</b><span>Υδατάνθ.</span></div><div class="macro"><b>${fmt(n.f)}γρ.</b><span>Λιπαρά</span></div>`;
+====
+    $('#pUnit', body).textContent = u.name === 'γρ' ? G() : st.qty === 1 ? '' : '×';
+    const n = calc();
+    $('#pKcal', body).textContent = fmt(n.kcal);
+    $('#pMac', body).outerHTML = macrosHtml(n).replace('class="macros"', 'class="macros" id="pMac"');
+>>>>
+<<<<
+  $('#pFav', body).onclick = e => { toggleFav(favKey); e.target.textContent = isFav(favKey) ? '⭐ Στα αγαπημένα' : '☆ Αγαπημένο'; };
+====
+  $('#pFav', body).onclick = e => { toggleFav(favKey); e.target.textContent = favLabel(isFav(favKey)); };
+>>>>
+<<<<
+    toast(entry ? 'Αποθηκεύτηκε ✓' : `+${fmt(e.kcal)} kcal ✓`);
+====
+    toast(entry ? T('Αποθηκεύτηκε ✓', 'Saved ✓') : `+${fmt(e.kcal)} kcal ✓`);
+>>>>
+<<<<
+  const body = openSheet(entry ? 'Στο περίπου' : 'Γράψε το στο περίπου');
+  const st = { meal: entry?.meal || meal };
+  body.innerHTML = `
+    <label class="field"><span>Τι έφαγες</span><input id="qName" value="${esc(entry?.name || name)}" placeholder="π.χ. Φαγητό έξω, κομμάτι τούρτα…"></label>
+    <label class="field"><span>Θερμίδες (περίπου)</span><input id="qKcal" inputmode="numeric" value="${entry ? entry.kcal : ''}" placeholder="π.χ. 600"></label>
+====
+  const body = openSheet(entry ? T('Στο περίπου', 'Estimate') : T('Γράψε το στο περίπου', 'Log an estimate'));
+  const st = { meal: entry?.meal || meal };
+  body.innerHTML = `
+    <label class="field"><span>${T('Τι έφαγες', 'What you ate')}</span><input id="qName" value="${esc(entry?.name || name)}" placeholder="${T('π.χ. Φαγητό έξω, κομμάτι τούρτα…', 'e.g. Dinner out, slice of cake…')}"></label>
+    <label class="field"><span>${T('Θερμίδες (περίπου)', 'Calories (approx.)')}</span><input id="qKcal" inputmode="numeric" value="${entry ? entry.kcal : ''}" placeholder="${T('π.χ. 600', 'e.g. 600')}"></label>
+>>>>
+<<<<
+    <label class="field"><span>Γεύμα</span><div class="seg" id="qMeal">${MEALS.map(m => `<button data-m="${m.key}">${m.icon} ${m.name}</button>`).join('')}</div></label>
+    <div class="actions">${entry ? '<button class="btn danger" id="qDel">Διαγραφή</button>' : ''}<button class="btn primary" id="qSave">${entry ? 'Αποθήκευση' : 'Πρόσθεσε'}</button></div>`;
+====
+    <label class="field"><span>${T('Γεύμα', 'Meal')}</span><div class="seg" id="qMeal">${MEALS.map(m => `<button data-m="${m.key}">${m.icon} ${mealName(m)}</button>`).join('')}</div></label>
+    <div class="actions">${entry ? `<button class="btn danger" id="qDel">${T('Διαγραφή', 'Delete')}</button>` : ''}<button class="btn primary" id="qSave">${entry ? T('Αποθήκευση', 'Save') : T('Πρόσθεσε', 'Add')}</button></div>`;
+>>>>
+<<<<
+    if (!(kcal >= 0)) return toast('Γράψε θερμίδες');
+    const e = { id: entry?.id || newId(), date: entry?.date || day, meal: st.meal, kind: 'quick', ref: null,
+      name: $('#qName', body).value.trim() || 'Φαγητό', qty: 1, unit: '', g: 0, kcal, p: 0, c: 0, f: 0 };
+====
+    if (!(kcal >= 0)) return toast(T('Γράψε θερμίδες', 'Enter calories'));
+    const e = { id: entry?.id || newId(), date: entry?.date || day, meal: st.meal, kind: 'quick', ref: null,
+      name: $('#qName', body).value.trim() || T('Φαγητό', 'Food'), qty: 1, unit: '', g: 0, kcal, p: 0, c: 0, f: 0 };
+>>>>
+<<<<
+    save(); closeSheet(); ui.tab = 'today'; ui.day = e.date; render(); toast('Αποθηκεύτηκε ✓');
+  };
+  if (entry) $('#qDel', body).onclick = () => deleteEntry(entry);
+====
+    save(); closeSheet(); ui.tab = 'today'; ui.day = e.date; render(); toast(T('Αποθηκεύτηκε ✓', 'Saved ✓'));
+  };
+  if (entry) $('#qDel', body).onclick = () => deleteEntry(entry);
+>>>>

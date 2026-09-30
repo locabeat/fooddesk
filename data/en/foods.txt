@@ -1,0 +1,594 @@
+# English names of the foods: id | name (same ids as data/foods.json)
+1 | Tomato
+2 | Cherry tomatoes
+3 | Cucumber
+4 | Green pepper
+5 | Red pepper
+6 | Roasted Florina pepper
+7 | Onion
+8 | Spring onion
+9 | Garlic
+10 | Carrot
+11 | Lettuce
+12 | Cabbage
+13 | Red cabbage
+14 | Rocket (arugula)
+15 | Spinach, raw
+16 | Spinach, boiled
+17 | Broccoli
+18 | Cauliflower
+19 | Zucchini
+20 | Eggplant
+21 | Eggplant, fried
+22 | Zucchini, fried
+23 | Potato, raw
+24 | Potatoes, boiled
+25 | Oven potatoes (with oil)
+26 | French fries
+27 | Mashed potatoes
+28 | Sweet potato, baked
+29 | Green beans, raw
+30 | Green beans, boiled
+31 | Peas (frozen)
+32 | Sweet corn
+33 | Mushrooms
+34 | Mushrooms, sautéed
+35 | Artichoke
+36 | Celery
+37 | Leek
+38 | Beetroot, boiled
+39 | Boiled greens (horta)
+40 | Amaranth greens (vlita), boiled
+41 | Parsley
+42 | Dill
+43 | Mint / Basil
+44 | Radishes
+45 | Kalamata olives
+46 | Green olives
+47 | Capers
+48 | Pickles (gherkins)
+49 | Roasted vegetables (with oil)
+50 | Mixed vegetables, boiled
+51 | Chopped tomatoes, canned
+52 | Tomato paste
+53 | Tomato passata
+54 | Apple
+55 | Pear
+56 | Banana
+57 | Orange
+58 | Mandarin
+59 | Grapefruit
+60 | Lemon (juice)
+61 | Kiwi
+62 | Strawberries
+63 | Grapes
+64 | Watermelon
+65 | Melon
+66 | Peach
+67 | Nectarine
+68 | Apricot
+69 | Cherries
+70 | Sour cherries
+71 | Plum
+72 | Fig, fresh
+73 | Pomegranate
+74 | Pineapple
+75 | Mango
+76 | Avocado
+77 | Blueberries
+78 | Blackberries / Raspberries
+79 | Quince
+80 | Persimmon
+81 | Fruit salad
+82 | Raisins
+83 | Dates
+84 | Dried figs
+85 | Dried apricots
+86 | Prunes
+87 | Canned fruit (in syrup)
+88 | Lentils, dry
+89 | Beans, dry
+90 | Chickpeas, dry
+91 | Fava (yellow split peas), dry
+92 | Giant beans, dry
+93 | Lentils, boiled (plain)
+94 | Chickpeas, boiled / canned
+95 | Red kidney beans, canned
+96 | White beans, boiled
+97 | Lentil soup
+98 | Bean soup (fasolada)
+99 | Chickpea soup (revithada)
+100 | Fava (purée with oil)
+101 | Baked giant beans (gigantes plaki)
+102 | Black-eyed pea salad
+103 | Hummus
+104 | Falafel
+105 | Soy mince (dry)
+106 | Tofu
+107 | Edamame
+108 | White bread
+109 | Wholemeal bread
+110 | Village / sourdough bread
+111 | White toast bread
+112 | Wholemeal toast bread
+113 | Rye bread
+114 | Pita bread (Arabic)
+115 | Souvlaki pita
+116 | Tortilla
+117 | Bun (burger / hot dog)
+118 | Baguette
+119 | Koulouri (sesame bread ring)
+120 | Rusks
+121 | Wholemeal rusks
+122 | Breadsticks
+123 | Barley rusk (paximadi)
+124 | Rice cake
+125 | Pasta, dry
+126 | Wholemeal pasta, dry
+127 | Pasta, boiled
+128 | Orzo, dry
+129 | Orzo, boiled
+130 | Hilopites (egg noodles), dry
+131 | Tortellini, filled (boiled)
+132 | Gnocchi (boiled)
+133 | White rice, raw
+134 | White rice, boiled
+135 | Brown rice, raw
+136 | Brown rice, boiled
+137 | Arborio rice (risotto), raw
+138 | Bulgur, raw
+139 | Bulgur, boiled
+140 | Quinoa, raw
+141 | Quinoa, boiled
+142 | Couscous, cooked
+143 | Trahana, raw
+144 | Oats (flakes)
+145 | Porridge with milk
+146 | Corn flakes
+147 | Chocolate cereal
+148 | Muesli
+149 | Granola
+150 | All-purpose flour
+151 | Wholemeal flour
+152 | Cornflour
+153 | Filo pastry
+154 | Puff pastry
+155 | Breadcrumbs
+156 | Dry yeast
+157 | Popcorn (homemade with oil)
+158 | Egg noodles, dry
+159 | Semolina
+160 | Pasta No2 (for pastitsio), dry
+161 | Chicken breast, raw
+162 | Chicken breast, grilled
+163 | Chicken thigh, raw (skinless)
+164 | Chicken thigh, roasted (with skin)
+165 | Chicken wings, roasted
+166 | Whole chicken, raw (meat with skin)
+167 | Rotisserie / roast chicken
+168 | Chicken mince, raw
+169 | Turkey breast, roasted
+170 | Chicken nuggets
+171 | Chicken schnitzel
+172 | Pork chop, raw
+173 | Pork chop, grilled
+174 | Pork leg / shoulder, raw
+175 | Roast pork
+176 | Pork tenderloin, roasted
+177 | Pork belly, grilled
+178 | Lean beef, raw
+179 | Beef, boiled / stewed (meat only)
+180 | Beef steak, grilled
+181 | Beef fillet, grilled
+182 | Beef mince, raw
+183 | Lean beef mince, raw
+184 | Mixed mince, raw
+185 | Cooked mince (sauce)
+186 | Burger patty (bifteki), grilled
+187 | Meatballs (keftedes), fried
+188 | Soutzoukakia (meat only)
+189 | Lamb, raw
+190 | Lamb, roasted
+191 | Goat, roasted
+192 | Rabbit
+193 | Beef liver
+194 | Village sausage, grilled
+195 | Frankfurter
+196 | Bacon
+197 | Ham (pork)
+198 | Turkey slices
+199 | Salami
+200 | Mortadella
+201 | Prosciutto
+202 | Pastourmas (cured beef)
+203 | Pork gyros (meat only)
+204 | Chicken gyros (meat only)
+205 | Pork souvlaki skewer
+206 | Chicken souvlaki skewer
+207 | Kebab
+208 | Salmon, raw
+209 | Salmon, grilled
+210 | Smoked salmon
+211 | Sea bream, grilled
+212 | Sea bass, grilled
+213 | Cod, grilled / boiled
+214 | Cod, fried (battered)
+215 | Anchovies, fried
+216 | Marinated anchovies
+217 | Sardines, grilled
+218 | Mackerel, grilled
+219 | Swordfish, grilled
+220 | Sole / Perch fillet (grilled)
+221 | Picarel (marida), fried
+222 | Tuna in water, canned
+223 | Tuna in oil, canned
+224 | Sardines in oil, canned
+225 | Shrimp, raw
+226 | Shrimp, boiled / grilled
+227 | Shrimp saganaki
+228 | Fried calamari
+229 | Grilled squid
+230 | Grilled octopus
+231 | Octopus in vinegar
+232 | Mussels (shelled, steamed)
+233 | Cuttlefish with spinach
+234 | Taramosalata
+235 | Fish soup
+236 | Crab salad / Surimi
+237 | Fish sticks
+238 | Egg, raw
+239 | Egg, boiled
+240 | Egg, fried
+241 | Egg, poached
+242 | Plain omelette (2 eggs)
+243 | Cheese omelette
+244 | Vegetable omelette
+245 | Scrambled eggs (with butter)
+246 | Egg whites
+247 | Strapatsada (eggs with tomato)
+248 | Fried eggs with fries
+249 | Whole milk 3.5%
+250 | Semi-skimmed milk 1.5%
+251 | Skimmed milk 0%
+252 | Evaporated milk
+253 | Chocolate milk
+254 | Almond drink (unsweetened)
+255 | Oat drink
+256 | Soy drink
+257 | Greek yogurt 2%
+258 | Greek yogurt 0%
+259 | Greek yogurt 10%
+260 | Whole cow's milk yogurt
+261 | Sheep's milk yogurt
+262 | Fruit yogurt
+263 | Yogurt with honey & walnuts
+264 | Kefir
+265 | Ayran
+266 | Feta
+267 | Feta light
+268 | Kefalotyri / Graviera
+269 | Kasseri
+270 | Gouda
+271 | Emmental / Edam
+272 | Toast cheese (slices)
+273 | Light cheese (slices)
+274 | Parmesan
+275 | Mozzarella
+276 | Mozzarella light
+277 | Anthotyro / Mizithra
+278 | Cottage cheese
+279 | Ricotta
+280 | Philadelphia (cream cheese)
+281 | Philadelphia light
+282 | Cooking cream 35%
+283 | Cooking cream light
+284 | Whipped cream (spray)
+285 | Halloumi, grilled
+286 | Manouri
+287 | Katiki / Tyrosalata (cheese dip)
+288 | Tzatziki
+289 | Saganaki (fried cheese)
+290 | Olive oil
+291 | Sunflower / seed oil
+292 | Butter
+293 | Margarine / plant butter
+294 | Mayonnaise
+295 | Mayonnaise light
+296 | Almonds
+297 | Walnuts
+298 | Hazelnuts
+299 | Pistachios
+300 | Peanuts
+301 | Cashews
+302 | Sunflower seeds (shelled)
+303 | Pumpkin seeds (shelled)
+304 | Mixed nuts
+305 | Sesame
+306 | Tahini
+307 | Peanut butter
+308 | Flaxseed
+309 | Chia seeds
+310 | Desiccated coconut
+311 | Sugar
+312 | Brown sugar
+313 | Icing sugar
+314 | Honey
+315 | Sweetener (stevia / saccharin)
+316 | Jam
+317 | Jam light
+318 | Hazelnut spread (Nutella)
+319 | Chocolate syrup
+320 | Cocoa powder
+321 | Ketchup
+322 | Mustard
+323 | Barbecue sauce
+324 | Soy sauce
+325 | Homemade tomato sauce
+326 | Bolognese sauce
+327 | Béchamel sauce
+328 | Carbonara / cream sauce
+329 | Pesto
+330 | Dressing (vinaigrette)
+331 | Caesar / yogurt dressing
+332 | Vinegar
+333 | Balsamic vinegar
+334 | Balsamic glaze
+335 | Stock (cube)
+336 | Salt / Pepper / Spices
+337 | Baking powder
+338 | Vanilla (vanilla sugar)
+339 | Cooking chocolate
+340 | Espresso, no sugar
+341 | Espresso, medium sweet
+342 | Espresso, sweet
+343 | Freddo espresso, no sugar
+344 | Freddo espresso, medium sweet
+345 | Freddo espresso, sweet
+346 | Freddo cappuccino, no sugar
+347 | Freddo cappuccino, medium sweet
+348 | Freddo cappuccino, sweet
+349 | Cappuccino, no sugar
+350 | Cappuccino, medium sweet
+351 | Cappuccino, sweet
+352 | Frappé, no sugar
+353 | Frappé, medium sweet
+354 | Frappé, sweet
+355 | Frappé, sweet with milk
+356 | Greek coffee, no sugar
+357 | Greek coffee, medium sweet
+358 | Greek coffee, sweet
+359 | Filter / Americano, black
+360 | Filter coffee with milk
+361 | Nescafé, hot with milk
+362 | Latte
+363 | Flat white
+364 | Freddo latte / Iced latte
+365 | Mocha
+366 | Hot chocolate / Cocoa
+367 | Iced chocolate
+368 | Tea / Chamomile (plain)
+369 | Tea with sugar
+370 | Tea with honey
+371 | Ice tea
+372 | Water
+373 | Fresh orange juice
+374 | Packaged juice (100%)
+375 | Fresh juice / Smoothie
+376 | Coca-Cola / Regular soft drink
+377 | Coca-Cola Zero / Light
+378 | Orangeade / Lemonade
+379 | Soda / Sparkling water
+380 | Energy drink
+381 | Energy drink, sugar-free
+382 | Milkshake
+383 | Protein shake
+384 | Protein powder (whey)
+385 | Beer
+386 | Alcohol-free beer
+387 | White wine
+388 | Red wine
+389 | Rosé wine
+390 | Sweet wine / Muscat
+391 | Sparkling wine / Champagne
+392 | Ouzo / Tsipouro
+393 | Spirit (vodka / whisky / gin), neat
+394 | Spirit with soft drink
+395 | Cocktail
+396 | Liqueur
+397 | Aperol spritz
+398 | Sangria
+399 | Milk chocolate
+400 | Dark chocolate 70%
+401 | Filled chocolate (wafer / bar)
+402 | Wafer
+403 | Packaged croissant (chocolate)
+404 | Petit-beurre biscuits
+405 | Wholemeal / Digestive biscuits
+406 | Chocolate / sandwich biscuits
+407 | Cookies
+408 | Cereal bar
+409 | Protein bar
+410 | Pasteli (sesame honey bar)
+411 | Potato chips
+412 | Corn puffs / Snacks
+413 | Crackers
+414 | Butter cookies (koulourakia)
+415 | Cake / Homemade cake
+416 | Chocolate cake
+417 | Layer cake (tourta)
+418 | Pastry (pasta)
+419 | Profiteroles
+420 | Tiramisu
+421 | Cheesecake
+422 | Brownie
+423 | Muffin
+424 | Donut
+425 | Crêpe with hazelnut spread
+426 | Waffle with hazelnut spread
+427 | Pancakes (plain)
+428 | Pancakes with honey / syrup
+429 | Loukoumades with honey
+430 | Baklava
+431 | Galaktoboureko
+432 | Kataifi
+433 | Rice pudding
+434 | Vanilla custard / Pudding
+435 | Farsala halva
+436 | Tahini halva
+437 | Kourabies
+438 | Melomakarono
+439 | Tsoureki (sweet bread)
+440 | Vasilopita / Orange cake
+441 | Portokalopita (orange pie)
+442 | Ravani / Samali
+443 | Ice cream (cup / scoop)
+444 | Ice cream stick with coating
+445 | Ice cream cone
+446 | Frozen yogurt
+447 | Granita
+448 | Spoon sweet (glyko koutaliou)
+449 | Turkish delight (loukoumi)
+450 | Candies / Gummies
+451 | Chewing gum
+452 | Moussaka
+453 | Pastitsio
+454 | Gemista (stuffed tomatoes / peppers with rice)
+455 | Gemista with mince
+456 | Dolmadakia (vine leaves with rice)
+457 | Dolmades with mince, avgolemono
+458 | Cabbage rolls (lahanodolmades)
+459 | Green beans in olive oil
+460 | Peas in olive oil
+461 | Okra in olive oil
+462 | Briam (baked vegetables)
+463 | Imam baildi
+464 | Papoutsakia (stuffed eggplant)
+465 | Spanakorizo (spinach rice)
+466 | Leek rice / Cabbage rice
+467 | Artichokes à la Polita
+468 | Beef in tomato sauce with pasta
+469 | Beef in tomato sauce with mash
+470 | Lemon beef with potatoes
+471 | Stifado
+472 | Beef giouvetsi
+473 | Chicken with potatoes in the oven
+474 | Chicken in tomato sauce with pasta
+475 | Chicken with rice / pilaf
+476 | Chicken soup avgolemono
+477 | Pork with celery
+478 | Pork with potatoes in the oven
+479 | Lamb with potatoes in the oven
+480 | Lamb fricassee
+481 | Meatballs with fries
+482 | Soutzoukakia with rice
+483 | Soutzoukakia with mash
+484 | Burger patties with oven potatoes
+485 | Spaghetti with mince (bolognese)
+486 | Pasta with tomato sauce
+487 | Pasta with butter & cheese
+488 | Carbonara
+489 | Pasta with cream & chicken
+490 | Shrimp pasta
+491 | Lasagna
+492 | Vegetable risotto
+493 | Mushroom risotto
+494 | Chicken risotto
+495 | Pilaf
+496 | Giouvarlakia (meatball soup)
+497 | Trahana soup
+498 | Orzotto
+499 | Hilopites with chicken
+500 | Vegetable soup
+501 | Pumpkin velouté
+502 | Magiritsa
+503 | Patsas (tripe soup)
+504 | Spanakopita (tray)
+505 | Tyropita (tray)
+506 | Hortopita (greens pie)
+507 | Zucchini pie
+508 | Leek pie
+509 | Chicken pie
+510 | Meat pie
+511 | Bouyiourdi
+512 | Zucchini fritters
+513 | Tomato fritters
+514 | Pork tigania
+515 | Souvlaki skewers with fries & pita
+516 | Ham & cheese toastie
+517 | Turkey & cheese toastie
+518 | Cheese toastie
+519 | Ham & cheese toastie with tomato & mayo
+520 | Club sandwich (with fries)
+521 | Baguette sandwich (turkey-cheese-veg)
+522 | Baguette sandwich with sauce
+523 | Chicken wrap
+524 | Cheese pie (kourou)
+525 | Cheese pie (puff pastry, bakery)
+526 | Spinach pie (puff pastry, bakery)
+527 | Bougatsa with custard
+528 | Bougatsa with cheese
+529 | Butter croissant (bakery)
+530 | Chocolate croissant (bakery)
+531 | Ham & cheese croissant
+532 | Peinirli
+533 | Bakery pizza (slice)
+534 | Sausage roll (loukanikopita)
+535 | Koulouri with cream cheese
+536 | Wholemeal bakery bar / cookie
+537 | Pork gyros pita (full)
+538 | Chicken gyros pita (full)
+539 | Pork souvlaki pita (full)
+540 | Chicken souvlaki pita (full)
+541 | Kebab pita (full)
+542 | Sausage pita (full)
+543 | Bifteki pita (full)
+544 | Pork gyros plate (with fries, pita, salad)
+545 | Chicken gyros plate (with fries, pita, salad)
+546 | Souvlaki plate (with fries, pita)
+547 | Chicken nuggets with fries (portion)
+548 | Classic burger
+549 | Cheeseburger / Bacon burger
+550 | Double burger
+551 | Crispy chicken burger
+552 | Hot dog
+553 | Pizza margherita
+554 | Pizza special / pepperoni
+555 | Calzone
+556 | Savoury crêpe (ham-cheese-mushrooms)
+557 | Savoury chicken crêpe (with sauce)
+558 | Chicken souvlaki plate with fries
+559 | Chicken nuggets (fast food)
+560 | French fries (fast food)
+561 | Sauce for fries / souvlaki
+562 | Sushi (maki / nigiri)
+563 | Sushi (uramaki with sauce / fried)
+564 | Chinese noodles with chicken
+565 | Chinese fried rice
+566 | Sweet & sour chicken
+567 | Pad thai
+568 | Burrito
+569 | Poke bowl
+570 | Restaurant club / Caesar salad
+571 | Greek salad (horiatiki)
+572 | Greek salad without feta
+573 | Tomato-cucumber salad (with oil)
+574 | Cabbage-carrot salad
+575 | Lettuce salad (with oil)
+576 | Green salad (plain)
+577 | Chef's salad
+578 | Caesar salad
+579 | Quinoa / bulgur salad
+580 | Tuna salad
+581 | Potato salad
+582 | Russian salad
+583 | Eggplant dip (melitzanosalata)
+584 | Htipiti (spicy feta dip)
+585 | Skordalia (garlic dip)
+586 | Dakos
+587 | Pita with taramas / dip (meze)
+588 | Grilled pita with oil
+589 | Potato croquettes
+590 | Cheese croquettes
+591 | Mini cheese / spinach pies (kourou)
+592 | Stuffed mushrooms
+593 | Pasta salad
