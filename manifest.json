@@ -1,0 +1,15 @@
+{
+  "name": "Food Desk",
+  "short_name": "Food Desk",
+  "description": "Τι έφαγα σήμερα: θερμίδες, συνταγές, νερό",
+  "lang": "el",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5faf3",
+  "theme_color": "#2e9e6b",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
