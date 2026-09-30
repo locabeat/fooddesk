@@ -93,7 +93,9 @@ let data = store.get('food.data', null);
 function save() { store.set('food.data', data); }
 function freshData() {
   return {
-    settings: { kcalGoal: 1800, waterGoal: 8, theme: 'light' },
+    // Στοιχεία για τον υπολογισμό στόχου: ύψος (εκ.), ηλικία, φύλο f/m, κίνηση (συντελεστής), στόχος, κιλά-στόχος.
+    settings: { kcalGoal: 1800, waterGoal: 8, theme: 'light', height: 0, age: 0, sex: 'f', activity: 1.375, goalType: 'lose05', targetKg: 0 },
+    weights: [],      // { date, kg }
     log: [],          // { id, date, meal, kind: food|recipe|quick, ref, name, qty, unit, g, kcal, p, c, f }
     water: {},        // { 'YYYY-MM-DD': ποτήρια }
     favs: [],         // 'food:12' / 'recipe:3'
@@ -106,6 +108,7 @@ function freshData() {
 function migrate(d) {
   const f = freshData();
   for (const k in f) if (d[k] === undefined) d[k] = f[k];
+  d.settings = { ...f.settings, ...d.settings };
   return d;
 }
 function nextCustomId(list) { return Math.max(CUSTOM_ID - 1, ...list.map(x => x.id)) + 1; }
@@ -242,7 +245,8 @@ function recipeRowOut(id) {
     items: JSON.stringify(r.items.map(({ food, name, qty, unit, g }) => ({ food, name, qty, unit, g }))) };
 }
 const comboRowOut = c => ({ id: c.id, name: c.name, icon: c.icon, itemsText: c.items.map(e => `${e.name} (${fmt(e.kcal)} kcal)`).join('\n'), items: JSON.stringify(c.items) });
-const settingsRows = () => ['kcalGoal', 'waterGoal'].map(k => ({ id: k, value: String(data.settings[k]) }));
+const SET_NUM = ['kcalGoal', 'waterGoal', 'height', 'age', 'activity', 'targetKg'], SET_STR = ['sex', 'goalType'];
+const settingsRows = () => [...SET_NUM, ...SET_STR].map(k => ({ id: k, value: String(data.settings[k] ?? '') }));
 const boolOf = v => v === true || String(v).toUpperCase() === 'TRUE';
 const numOf = v => typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.')) || 0;
 
@@ -250,7 +254,11 @@ const numOf = v => typeof v === 'number' ? v : parseFloat(String(v).replace(',',
 function fromSheet(all) {
   const d = freshData();
   d.settings.theme = data?.settings?.theme || 'light';
-  for (const r of all.settings) if (r.id in d.settings && r.id !== 'theme') d.settings[r.id] = numOf(r.value) || d.settings[r.id];
+  for (const r of all.settings) {
+    if (SET_NUM.includes(r.id)) d.settings[r.id] = numOf(r.value) || d.settings[r.id];
+    else if (SET_STR.includes(r.id) && r.value !== '') d.settings[r.id] = String(r.value);
+  }
+  d.weights = (all.weight || []).map(r => ({ date: String(r.id), kg: numOf(r.kg) })).filter(w => w.kg > 0).sort((a, b) => a.date.localeCompare(b.date));
   d.log = all.log.map(r => ({ id: String(r.id), date: String(r.date), meal: r.meal, kind: r.kind, ref: r.kind === 'quick' ? null : numOf(r.ref),
     name: String(r.name), qty: numOf(r.qty), unit: String(r.unit), g: numOf(r.g), kcal: numOf(r.kcal), p: numOf(r.p), c: numOf(r.c), f: numOf(r.f) }));
   for (const r of all.water) d.water[String(r.id)] = numOf(r.glasses);
@@ -358,11 +366,13 @@ function render() {
   $('#refreshBtn').hidden = !online();
   if (out) return renderLogin($('#view'));
   $$('.tabbar [data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === ui.tab));
-  const labels = { today: T('Σήμερα', 'Today'), recipes: T('Συνταγές', 'Recipes'), plan: T('Πρόγραμμα', 'Plan'), settings: T('Ρυθμίσεις', 'Settings') };
+  const labels = { today: T('Σήμερα', 'Today'), progress: T('Πρόοδος', 'Progress'), recipes: T('Συνταγές', 'Recipes'), plan: T('Πρόγραμμα', 'Plan') };
+  $('#settingsBtn').classList.toggle('on', ui.tab === 'settings');
+  $('#settingsBtn').setAttribute('aria-label', T('Ρυθμίσεις', 'Settings'));
   $$('.tabbar [data-label]').forEach(s => { s.textContent = labels[s.dataset.label]; });
   document.documentElement.lang = LANG;
   const v = $('#view');
-  ({ today: renderToday, recipes: renderRecipes, plan: renderPlan, settings: renderSettings })[ui.tab](v);
+  ({ today: renderToday, progress: renderProgress, recipes: renderRecipes, plan: renderPlan, settings: renderSettings })[ui.tab](v);
 }
 
 function ring(eaten, goal) {
@@ -1022,6 +1032,233 @@ function editIngredient(st, i) {
   setTimeout(() => { q.focus(); q.select(); }, 80);
 }
 
+/* ---------- πρόοδος: ιστορικό θερμίδων, εβδομαδιαίο σύνολο, βάρος ---------- */
+// Δευτέρα της εβδομάδας μιας ημερομηνίας.
+function weekStart(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const wd = (new Date(y, m - 1, d).getDay() + 6) % 7;
+  return addDays(iso, -wd);
+}
+const shortDay = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString(LOCALE(), { weekday: 'short' }).replace('.', ''); };
+const dm = iso => { const [, m, d] = iso.split('-'); return `${+d}/${+m}`; };
+
+/**
+ * Ραβδόγραμμα θερμίδων ανά μέρα με γραμμή στόχου. Ένα χρώμα (ταυτότητα = «θερμίδες»),
+ * οι μέρες πάνω από τον στόχο παίρνουν ▲ (όχι μόνο χρώμα). Πάτημα σε μπάρα → εκείνη η μέρα.
+ */
+function kcalChart(days, goal) {
+  const W = 340, H = 170, top = 16, bottom = 22, left = 4, right = 4;
+  const max = Math.max(goal * 1.25, ...days.map(d => d.kcal), 1);
+  const y = v => top + (H - top - bottom) * (1 - v / max);
+  const bw = (W - left - right) / days.length;
+  const gap = Math.min(6, bw * 0.3), barW = bw - gap;
+  const r = Math.min(4, barW / 2);
+  const bars = days.map((d, i) => {
+    const x = left + i * bw + gap / 2, h = Math.max(0, y(0) - y(d.kcal));
+    const topY = y(d.kcal);
+    // Στρογγυλεμένη μόνο η πάνω πλευρά, «πατάει» στη βάση.
+    const path = h > r ? `M${x},${y(0)} V${topY + r} Q${x},${topY} ${x + r},${topY} H${x + barW - r} Q${x + barW},${topY} ${x + barW},${topY + r} V${y(0)} Z` : h > 0 ? `M${x},${y(0)} V${topY} H${x + barW} V${y(0)} Z` : '';
+    const over = d.kcal > goal;
+    const label = days.length <= 7 ? shortDay(d.date) : (i % 5 === 0 ? dm(d.date) : '');
+    return `<g class="bar-g" data-day="${d.date}" tabindex="0" role="button" aria-label="${dayTitle(d.date)}: ${fmt(d.kcal)} kcal">
+      <title>${dayTitle(d.date)} · ${fmt(d.kcal)} kcal</title>
+      <rect x="${left + i * bw}" y="${top}" width="${bw}" height="${H - top}" fill="transparent"/>
+      ${path ? `<path d="${path}" class="bar ${d.date === todayIso() ? 'today' : ''}"/>` : ''}
+      ${over ? `<text x="${x + barW / 2}" y="${topY - 4}" class="over-mark" text-anchor="middle">▲</text>` : ''}
+      ${label ? `<text x="${x + barW / 2}" y="${H - 6}" class="axis" text-anchor="middle">${label}</text>` : ''}
+    </g>`;
+  }).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${T('Θερμίδες ανά μέρα', 'Calories per day')}">
+    <line x1="${left}" x2="${W - right}" y1="${y(0)}" y2="${y(0)}" class="baseline"/>
+    ${bars}
+    <line x1="${left}" x2="${W - right}" y1="${y(goal)}" y2="${y(goal)}" class="goal-line"/>
+    <text x="${left + 2}" y="${y(goal) - 4}" class="goal-label halo">${T('στόχος', 'goal')} ${fmt(goal)}</text>
+  </svg>`;
+}
+
+/** Γραμμή βάρους (2px, σημεία 8px) με διακεκομμένη γραμμή για τα κιλά-στόχο αν έχουν οριστεί. */
+function weightChart(ws, target) {
+  const W = 340, H = 150, top = 14, bottom = 20, left = 30, right = 8;
+  const vals = ws.map(w => w.kg).concat(target ? [target] : []);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (hi - lo < 2) { lo -= 1; hi += 1; }
+  const pad = (hi - lo) * 0.1; lo -= pad; hi += pad;
+  const t0 = Date.parse(ws[0].date), t1 = Date.parse(ws[ws.length - 1].date) || t0;
+  const x = iso => ws.length === 1 ? (left + W - right) / 2 : left + (W - left - right) * (Date.parse(iso) - t0) / Math.max(1, t1 - t0);
+  const y = v => top + (H - top - bottom) * (1 - (v - lo) / (hi - lo));
+  const line = ws.map((w, i) => `${i ? 'L' : 'M'}${x(w.date).toFixed(1)},${y(w.kg).toFixed(1)}`).join(' ');
+  const fmtKg = v => (Math.round(v * 10) / 10).toLocaleString(LOCALE());
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${T('Βάρος στον χρόνο', 'Weight over time')}">
+    <text x="${left - 6}" y="${y(hi - pad) + 4}" class="axis" text-anchor="end">${fmtKg(hi - pad)}</text>
+    <text x="${left - 6}" y="${y(lo + pad) + 4}" class="axis" text-anchor="end">${fmtKg(lo + pad)}</text>
+    ${target ? `<line x1="${left}" x2="${W - right}" y1="${y(target)}" y2="${y(target)}" class="goal-line"/><text x="${W - right}" y="${y(target) - 4}" class="goal-label" text-anchor="end">${T('στόχος', 'goal')} ${fmtKg(target)}</text>` : ''}
+    <path d="${line}" class="wline"/>
+    ${ws.map(w => `<circle cx="${x(w.date)}" cy="${y(w.kg)}" r="4" class="wdot"><title>${dm(w.date)} · ${fmtKg(w.kg)} kg</title></circle>`).join('')}
+    <text x="${left}" y="${H - 4}" class="axis">${dm(ws[0].date)}</text>
+    ${ws.length > 1 ? `<text x="${W - right}" y="${H - 4}" class="axis" text-anchor="end">${dm(ws[ws.length - 1].date)}</text>` : ''}
+  </svg>`;
+}
+
+function renderProgress(v) {
+  const goal = data.settings.kcalGoal;
+  ui.range = ui.range || 'week';
+  const n = ui.range === 'week' ? 7 : 30;
+  // Εβδομάδα = Δευτέρα–Κυριακή. Μήνας = οι τελευταίες 30 μέρες.
+  ui.pEnd = ui.pEnd || todayIso();
+  const first = ui.range === 'week' ? weekStart(ui.pEnd) : addDays(ui.pEnd, -29);
+  const days = Array.from({ length: n }, (_, i) => { const date = addDays(first, i); return { date, ...totals(dayEntries(date)) }; });
+  const past = days.filter(d => d.date <= todayIso());
+  const logged = past.filter(d => d.kcal > 0);
+  const avg = logged.length ? totals(logged).kcal / logged.length : 0;
+  const onTarget = logged.filter(d => d.kcal <= goal && d.kcal >= goal * 0.8).length;
+  // Μετράνε μόνο οι μέρες που έχεις γράψει κάτι (μια ξεχασμένη μέρα δεν «χαρίζει» θερμίδες).
+  const weekTotal = totals(logged).kcal, weekBudget = goal * logged.length;
+  const isCurrent = days.some(d => d.date === todayIso());
+  const title = ui.range === 'week' ? `${dm(days[0].date)} – ${dm(days[6].date)}` : `${dm(days[0].date)} – ${dm(days[29].date)}`;
+  const mac = logged.length ? totals(logged) : { p: 0, c: 0, f: 0 };
+  const div = Math.max(1, logged.length);
+
+  const ws = data.weights;
+  const lastW = ws[ws.length - 1];
+  const monthAgo = [...ws].reverse().find(w => w.date <= addDays(todayIso(), -28));
+  const diff = lastW && monthAgo ? lastW.kg - monthAgo.kg : null;
+  const kg = n1 => (Math.round(n1 * 10) / 10).toLocaleString(LOCALE());
+
+  v.innerHTML = `
+    <div class="seg" id="pgRange" style="margin-bottom:12px"><button data-r="week">${T('Εβδομάδα', 'Week')}</button><button data-r="month">${T('30 μέρες', '30 days')}</button></div>
+    <div class="daynav">
+      <button class="icon-btn" id="pgPrev" aria-label="${T('Προηγούμενα', 'Previous')}"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <h2>${title}</h2>
+      <button class="icon-btn" id="pgNext" aria-label="${T('Επόμενα', 'Next')}" ${isCurrent ? 'disabled' : ''}><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+    </div>
+    <section class="card">
+      <h2>🔥 ${T('Θερμίδες', 'Calories')}</h2>
+      ${kcalChart(days, goal)}
+      <div class="legend small muted"><span><i class="sw bar-sw"></i>${T('θερμίδες μέρας', 'daily calories')}</span><span><i class="sw goal-sw"></i>${T('στόχος', 'goal')}</span><span>▲ ${T('πάνω από τον στόχο', 'over goal')}</span></div>
+      <div class="stats">
+        <div><b>${fmt(avg)}</b><span>${T('μέσος όρος / μέρα', 'average / day')}</span></div>
+        <div><b>${onTarget}/${logged.length}</b><span>${T('μέρες στον στόχο', 'days on target')}</span></div>
+        ${ui.range === 'week' && logged.length ? `<div><b class="${weekTotal > weekBudget ? 'over-txt' : 'ok-txt'}">${weekTotal > weekBudget ? '+' : '−'}${fmt(Math.abs(weekBudget - weekTotal))}</b><span>${weekTotal > weekBudget ? T('πάνω από την εβδομάδα', 'over for the week') : T('περισσεύουν στην εβδομάδα', 'left for the week')}</span></div>` : ''}
+      </div>
+      <p class="small muted">${T('«Στον στόχο» = μέρες με 80–100% του στόχου. Πάτα μια μπάρα για να δεις τη μέρα.', '“On target” = days at 80–100% of the goal. Tap a bar to open that day.')}</p>
+    </section>
+    <section class="card">
+      <h2>🥩 ${T('Μέσος όρος θρεπτικών / μέρα', 'Average nutrients / day')}</h2>
+      ${macrosHtml({ p: mac.p / div, c: mac.c / div, f: mac.f / div })}
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>⚖️ ${T('Βάρος', 'Weight')}</h2><button class="btn small primary" id="wAdd">${T('+ Ζυγίστηκα', '+ Log weight')}</button></div>
+      ${lastW ? `<div class="stats">
+          <div><b>${kg(lastW.kg)} kg</b><span>${T('τελευταίο', 'latest')} · ${dm(lastW.date)}</span></div>
+          ${diff !== null ? `<div><b>${diff > 0 ? '+' : diff < 0 ? '−' : ''}${kg(Math.abs(diff))} kg</b><span>${T('σε σχέση με πριν από έναν μήνα', 'vs a month ago')}</span></div>` : ''}
+          ${data.settings.targetKg ? `<div><b>${kg(Math.abs(lastW.kg - data.settings.targetKg))} kg</b><span>${T('μέχρι τον στόχο', 'to goal')}</span></div>` : ''}
+        </div>
+        ${weightChart(ws.slice(-60), data.settings.targetKg)}
+        <details class="adv"><summary class="small muted">${T('Όλες οι ζυγίσεις', 'All weigh-ins')} (${ws.length})</summary>
+          <div class="list flat">${[...ws].reverse().map(w => `<button class="item" data-w="${w.date}"><span class="txt"><b>${kg(w.kg)} kg</b><small>${dayTitle(w.date)}</small></span><span class="muted">✎</span></button>`).join('')}</div></details>`
+        : `<div class="empty">${T('Γράψε το βάρος σου για να βλέπεις πώς αλλάζει. Αρκεί μία φορά την εβδομάδα.', 'Log your weight to see how it changes. Once a week is enough.')}</div>`}
+    </section>`;
+  $$('#pgRange button', v).forEach(b => { b.classList.toggle('on', b.dataset.r === ui.range); b.onclick = () => { ui.range = b.dataset.r; ui.pEnd = todayIso(); render(); }; });
+  const step = ui.range === 'week' ? 7 : 30;
+  $('#pgPrev', v).onclick = () => { ui.pEnd = addDays(ui.pEnd, -step); render(); };
+  $('#pgNext', v).onclick = () => { const nx = addDays(ui.pEnd, step); ui.pEnd = nx > todayIso() ? todayIso() : nx; render(); };
+  $$('.bar-g', v).forEach(g => g.onclick = () => { if (g.dataset.day > todayIso()) return; ui.tab = 'today'; ui.day = g.dataset.day; render(); scrollTo(0, 0); });
+  $('#wAdd', v).onclick = () => openWeightForm();
+  $$('[data-w]', v).forEach(b => b.onclick = () => openWeightForm(data.weights.find(w => w.date === b.dataset.w)));
+}
+
+function openWeightForm(w) {
+  const body = openSheet(w ? T('Ζύγιση', 'Weigh-in') : T('Ζυγίστηκα', 'Log weight'));
+  const last = data.weights[data.weights.length - 1];
+  body.innerHTML = `
+    <label class="field"><span>${T('Κιλά', 'Kilograms')}</span><input id="wKg" inputmode="decimal" class="pin-input" style="letter-spacing:0" value="${w ? String(w.kg).replace('.', EN() ? '.' : ',') : ''}" placeholder="${last ? String(last.kg).replace('.', EN() ? '.' : ',') : '65'}"></label>
+    <label class="field"><span>${T('Ημερομηνία', 'Date')}</span><input id="wDate" type="date" value="${w ? w.date : todayIso()}" max="${todayIso()}"></label>
+    <div class="actions">${w ? `<button class="btn danger" id="wDel">${T('Διαγραφή', 'Delete')}</button>` : ''}<button class="btn primary" id="wSave">${T('Αποθήκευση', 'Save')}</button></div>`;
+  $('#wSave', body).onclick = () => {
+    const kgv = parseFloat($('#wKg', body).value.replace(',', '.'));
+    const date = $('#wDate', body).value || todayIso();
+    if (!(kgv > 20 && kgv < 400)) return toast(T('Γράψε κιλά, π.χ. 65,4', 'Enter kilograms, e.g. 65.4'));
+    // Μία ζύγιση ανά μέρα: η νέα αντικαθιστά την παλιά.
+    if (w && w.date !== date) { data.weights = data.weights.filter(x => x !== w); drop('weight', [w.date]); }
+    data.weights = data.weights.filter(x => x.date !== date).concat({ date, kg: Math.round(kgv * 10) / 10 }).sort((a, b) => a.date.localeCompare(b.date));
+    push('weight', [{ id: date, kg: Math.round(kgv * 10) / 10 }]);
+    save(); closeSheet(); render(); toast(T('Αποθηκεύτηκε ✓', 'Saved ✓'));
+  };
+  if (w) $('#wDel', body).onclick = () => {
+    data.weights = data.weights.filter(x => x !== w); drop('weight', [w.date]);
+    save(); closeSheet(); render();
+    toast(T('Διαγράφηκε', 'Deleted'), () => { data.weights = data.weights.concat(w).sort((a, b) => a.date.localeCompare(b.date)); push('weight', [{ id: w.date, kg: w.kg }]); save(); render(); });
+  };
+  setTimeout(() => $('#wKg', body).focus(), 80);
+}
+
+/* ---------- υπολογισμός στόχου θερμίδων ----------
+ * Mifflin–St Jeor: ΒΜΡ = 10·κιλά + 6,25·εκ. − 5·ηλικία + 5 (άνδρας) / −161 (γυναίκα),
+ * × συντελεστής κίνησης, ± ανάλογα με τον στόχο (0,5 κιλό/εβδ. ≈ 500 kcal/μέρα).
+ */
+const ACTIVITY = [[1.2, 'Σχεδόν καθόλου κίνηση', 'Mostly sitting'], [1.375, 'Λίγη (1–3 φορές/εβδ.)', 'Light (1–3×/week)'],
+  [1.55, 'Μέτρια (3–5 φορές/εβδ.)', 'Moderate (3–5×/week)'], [1.725, 'Πολλή (6–7 φορές/εβδ.)', 'High (6–7×/week)'], [1.9, 'Πολύ έντονη / χειρωνακτική δουλειά', 'Very high / physical job']];
+const GOALS = [['lose05', 'Να χάσω ~0,5 κιλό/εβδ.', 'Lose ~0.5 kg/week', -500], ['lose025', 'Να χάσω ~0,25 κιλό/εβδ.', 'Lose ~0.25 kg/week', -250],
+  ['keep', 'Να κρατήσω το βάρος μου', 'Maintain my weight', 0], ['gain', 'Να πάρω ~0,25 κιλό/εβδ.', 'Gain ~0.25 kg/week', 250]];
+function calcGoal(s, kg) {
+  if (!(s.height > 0 && s.age > 0 && kg > 0)) return null;
+  const bmr = 10 * kg + 6.25 * s.height - 5 * s.age + (s.sex === 'm' ? 5 : -161);
+  const tdee = bmr * s.activity;
+  const adj = (GOALS.find(g => g[0] === s.goalType) || GOALS[0])[3];
+  const floor = s.sex === 'm' ? 1500 : 1200;
+  const raw = tdee + adj;
+  return { bmr: Math.round(bmr), tdee: Math.round(tdee), goal: Math.max(floor, Math.round(raw / 10) * 10), floored: raw < floor, floor };
+}
+function openGoalCalc() {
+  const s = { ...data.settings };
+  const lastKg = data.weights[data.weights.length - 1]?.kg || 0;
+  const body = openSheet(T('🧮 Υπολογισμός στόχου', '🧮 Goal calculator'));
+  body.innerHTML = `
+    <div class="row2">
+      <label class="field"><span>${T('Ύψος (εκ.)', 'Height (cm)')}</span><input id="gH" inputmode="numeric" value="${s.height || ''}" placeholder="165"></label>
+      <label class="field"><span>${T('Ηλικία', 'Age')}</span><input id="gA" inputmode="numeric" value="${s.age || ''}" placeholder="30"></label>
+      <label class="field"><span>${T('Βάρος (κιλά)', 'Weight (kg)')}</span><input id="gW" inputmode="decimal" value="${lastKg || ''}" placeholder="65"></label>
+      <label class="field"><span>${T('Φύλο (για τον τύπο)', 'Sex (for the formula)')}</span><div class="seg" id="gS"><button data-s="f">${T('Γυναίκα', 'Female')}</button><button data-s="m">${T('Άνδρας', 'Male')}</button></div></label>
+    </div>
+    <label class="field"><span>${T('Κίνηση / άσκηση', 'Activity / exercise')}</span><select id="gAct">${ACTIVITY.map(([k, l, le]) => `<option value="${k}" ${k === s.activity ? 'selected' : ''}>${T(l, le)}</option>`).join('')}</select></label>
+    <label class="field"><span>${T('Στόχος', 'Goal')}</span><select id="gGoal">${GOALS.map(([k, l, le]) => `<option value="${k}" ${k === s.goalType ? 'selected' : ''}>${T(l, le)}</option>`).join('')}</select></label>
+    <label class="field"><span>${T('Κιλά-στόχος (προαιρετικά, για το γράφημα)', 'Target weight (optional, for the chart)')}</span><input id="gT" inputmode="decimal" value="${s.targetKg || ''}"></label>
+    <div class="calc-out" id="gOut"></div>
+    <p class="small muted">${T('Υπολογισμός Mifflin–St Jeor: μια καλή εκτίμηση για να ξεκινήσεις, όχι ιατρική συμβουλή. Αν μετά από 2–3 εβδομάδες το βάρος δεν κινείται όπως θέλεις, άλλαξε τον στόχο κατά ±100–200 kcal.', 'Mifflin–St Jeor formula: a good starting estimate, not medical advice. If your weight is not moving as you want after 2–3 weeks, adjust the goal by ±100–200 kcal.')}</p>
+    <div class="actions"><button class="btn" id="gNo">${T('Κλείσιμο', 'Close')}</button><button class="btn primary" id="gOk" disabled>${T('Βάλ\' το ως στόχο', 'Set as my goal')}</button></div>`;
+  const read = () => {
+    s.height = parseFloat($('#gH', body).value) || 0; s.age = parseFloat($('#gA', body).value) || 0;
+    s.activity = parseFloat($('#gAct', body).value); s.goalType = $('#gGoal', body).value;
+    s.targetKg = parseFloat(($('#gT', body).value || '').replace(',', '.')) || 0;
+    return parseFloat(($('#gW', body).value || '').replace(',', '.')) || 0;
+  };
+  let res = null;
+  const draw = () => {
+    const kgv = read();
+    $$('#gS button', body).forEach(b => b.classList.toggle('on', b.dataset.s === s.sex));
+    res = calcGoal(s, kgv);
+    $('#gOk', body).disabled = !res;
+    $('#gOut', body).innerHTML = res
+      ? `<div class="stats"><div><b>${fmt(res.bmr)}</b><span>${T('καύση σε ηρεμία', 'at rest (BMR)')}</span></div><div><b>${fmt(res.tdee)}</b><span>${T('για να κρατήσεις το βάρος', 'to maintain')}</span></div><div><b class="ok-txt">${fmt(res.goal)}</b><span>${T('προτεινόμενος στόχος', 'suggested goal')}</span></div></div>
+         ${res.floored ? `<p class="small note">⚠️ ${T(`Δεν προτείνω κάτω από ${fmt(res.floor)} kcal τη μέρα, οπότε ο στόχος μπήκε εκεί.`, `I don't suggest going below ${fmt(res.floor)} kcal a day, so the goal was set there.`)}</p>` : ''}`
+      : `<p class="small muted">${T('Συμπλήρωσε ύψος, ηλικία και βάρος.', 'Fill in height, age and weight.')}</p>`;
+  };
+  $$('input, select', body).forEach(el => el.oninput = draw);
+  $$('#gS button', body).forEach(b => b.onclick = () => { s.sex = b.dataset.s; draw(); });
+  $('#gNo', body).onclick = closeSheet;
+  $('#gOk', body).onclick = () => {
+    const kgv = read();
+    Object.assign(data.settings, { height: s.height, age: s.age, sex: s.sex, activity: s.activity, goalType: s.goalType, targetKg: s.targetKg, kcalGoal: res.goal });
+    // Αν έγραψες βάρος εδώ και δεν υπάρχει σημερινή ζύγιση, μπαίνει και στο Βάρος.
+    if (kgv > 20 && !data.weights.some(w => w.date === todayIso()) && kgv !== data.weights[data.weights.length - 1]?.kg) {
+      data.weights.push({ date: todayIso(), kg: Math.round(kgv * 10) / 10 }); push('weight', [{ id: todayIso(), kg: Math.round(kgv * 10) / 10 }]);
+    }
+    save(); push('settings', settingsRows()); closeSheet(); render();
+    toast(T(`Νέος στόχος: ${fmt(res.goal)} kcal ✓`, `New goal: ${fmt(res.goal)} kcal ✓`));
+  };
+  draw();
+}
+
 /* ---------- πρόγραμμα (έρχεται) ---------- */
 function renderPlan(v) {
   v.innerHTML = `<section class="card soon"><div class="big">📅</div><h2>${T('Πρόγραμμα εβδομάδας', 'Weekly plan')}</h2>
@@ -1038,7 +1275,7 @@ function renderSettings(v) {
         <label class="field"><span>${T('Θερμίδες / ημέρα', 'Calories / day')}</span><input id="sKcal" inputmode="numeric" value="${s.kcalGoal}"></label>
         <label class="field"><span>${T('Νερό (ποτήρια)', 'Water (glasses)')}</span><input id="sWater" inputmode="numeric" value="${s.waterGoal}"></label>
       </div>
-      <p class="small muted">${T('Σε επόμενο βήμα: υπολογισμός του στόχου από ύψος, βάρος, ηλικία και κίνηση.', 'Coming next: calculating your goal from height, weight, age and activity.')}</p>
+      <button class="btn block" id="sCalc">🧮 ${T('Υπολόγισε τον στόχο μου', 'Calculate my goal')}</button>
     </section>
     <section class="card">
       <h2>🌍 ${T('Γλώσσα', 'Language')}</h2>
@@ -1069,6 +1306,7 @@ function renderSettings(v) {
     </section>`;
   const num = (id, key, min, max) => { $(id, v).onchange = e => { const n = parseInt(e.target.value, 10); if (n >= min && n <= max) { s[key] = n; save(); push('settings', settingsRows()); toast(T('Αποθηκεύτηκε ✓', 'Saved ✓')); } else e.target.value = s[key]; }; };
   $$('#sLang button', v).forEach(b => b.onclick = () => setLang(b.dataset.l));
+  $('#sCalc', v).onclick = openGoalCalc;
   num('#sKcal', 'kcalGoal', 800, 6000);
   num('#sWater', 'waterGoal', 1, 30);
   const mine = [
@@ -1225,6 +1463,7 @@ async function init() {
   $$('.tabbar [data-tab]').forEach(b => b.onclick = () => { ui.tab = b.dataset.tab; if (ui.tab === 'today') ui.day = todayIso(); render(); scrollTo(0, 0); });
   $('#addBtn').onclick = () => openAdd(mealByTime(), ui.tab === 'today' ? ui.day : todayIso());
   $('#sheetClose').onclick = closeSheet;
+  $('#settingsBtn').onclick = () => { ui.tab = 'settings'; render(); scrollTo(0, 0); };
   $('#overlay').onclick = e => { if (e.target.id === 'overlay') closeSheet(); };
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
   $('#refreshBtn').onclick = async () => { if (await refresh()) toast(T('Ενημερώθηκε ✓', 'Updated ✓')); };

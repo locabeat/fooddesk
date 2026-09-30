@@ -1,6 +1,6 @@
 // Κρατάει τα αρχεία του site για να ανοίγει γρήγορα και χωρίς internet.
 // Αλλάζεις τον αριθμό σε κάθε νέα έκδοση ώστε να ανανεωθεί η cache.
-const CACHE = 'fooddesk-v2';
+const CACHE = 'fooddesk-v3';
 const ASSETS = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.json', 'icons/icon.svg', 'data/foods.json', 'data/recipes.json', 'data/i18n.json'];
 
 self.addEventListener('install', e => {

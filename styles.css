@@ -328,3 +328,40 @@ body.busy .spinner { visibility: visible; }
 .pin-input { font-size: 22px; letter-spacing: .3em; text-align: center; }
 .adv summary { cursor: pointer; margin-top: 4px; }
 .link-btn { background: none; border: 0; color: var(--green-2); font-weight: 600; margin-top: 10px; text-decoration: underline; }
+
+/* ---------- Βήμα 3: πρόοδος, γραφήματα, βάρος, στόχος ---------- */
+body.logged-out #settingsBtn { display: none; }
+#settingsBtn.on { background: var(--chip-hover); color: var(--green-2); }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.card-head h2 { margin: 0; }
+.chart { width: 100%; height: auto; display: block; overflow: visible; }
+.chart .bar { fill: var(--green-2); }
+.chart .bar.today { fill: var(--green-1); }
+.chart .bar-g { cursor: pointer; outline: none; }
+.chart .bar-g:hover .bar, .chart .bar-g:focus .bar { fill: var(--green-3); }
+.chart .baseline { stroke: var(--line); stroke-width: 1; }
+.chart .goal-line { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.chart .goal-label, .chart .axis { fill: var(--muted); font-size: 10px; font-weight: 600; }
+.chart .over-mark { fill: var(--over); font-size: 9px; }
+.chart .wline { fill: none; stroke: var(--green-2); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .wdot { fill: var(--card-solid); stroke: var(--green-2); stroke-width: 2; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 8px 2px 4px; align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.sw { display: inline-block; width: 14px; height: 10px; border-radius: 3px; }
+.bar-sw { background: var(--green-2); }
+.goal-sw { height: 0; border-top: 2px dashed var(--muted); border-radius: 0; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; margin: 12px 0 6px; }
+.stats div { background: var(--chip); border-radius: 12px; padding: 9px 10px; }
+.stats b { display: block; font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+.stats span { font-size: 11.5px; color: var(--muted); }
+.ok-txt { color: var(--ok); }
+.over-txt { color: var(--over); }
+.calc-out { margin: 6px 0; }
+.field select { width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--card-border); background: var(--field); }
+/* Τα γραφήματα δεν παίρνουν το στυλ των εικονιδίων (svg { stroke… }). */
+svg.chart { stroke: none; fill: none; stroke-width: 0; width: 100%; height: auto; }
+svg.chart rect, svg.chart text, svg.chart .bar { stroke: none; }
+svg.chart .baseline { stroke-width: 1; }
+svg.chart .goal-line { stroke-width: 1.5; }
+svg.chart .wline, svg.chart .wdot { stroke-width: 2; }
+svg.chart .halo { paint-order: stroke; stroke: var(--card-solid); stroke-width: 3px; stroke-linejoin: round; }
