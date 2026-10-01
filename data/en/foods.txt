@@ -592,3 +592,27 @@
 591 | Mini cheese / spinach pies (kourou)
 592 | Stuffed mushrooms
 593 | Pasta salad
+594 | Cheddar
+595 | Grated cheese mix
+596 | Beef shank, raw (for stews)
+597 | Ribeye steak, raw
+598 | Osso buco, raw
+599 | Pork mince, raw
+600 | Beef chuck / shoulder, raw
+601 | Sweet potato, raw
+602 | Beef liver, raw
+603 | Pine nuts
+604 | Beef brisket, raw
+605 | Cognac / Brandy
+606 | Maple syrup
+607 | Fennel bulb
+608 | Beef cheeks, raw
+609 | Beef short ribs, raw, bone-in
+610 | Celeriac
+611 | Goat's cheese (soft)
+612 | Pumpkin (orange)
+613 | Coconut cream / milk (canned)
+614 | Dried cranberries
+615 | Chestnuts, boiled / roasted
+616 | Egg yolk
+617 | Guacamole

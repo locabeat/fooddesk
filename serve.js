@@ -4,9 +4,11 @@ const fs = require('fs');
 const path = require('path');
 
 const root = __dirname;
-const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml' };
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg' };
 
 http.createServer((req, res) => {
+  // Μόνο για την ανάρτηση του Code.gs στον επεξεργαστή του Apps Script (διαβάζει το αρχείο από εδώ).
+  if (req.url === '/apps-script/Code.gs') { res.setHeader('Access-Control-Allow-Origin', 'https://script.google.com'); res.setHeader('Access-Control-Allow-Private-Network', 'true'); if (req.method === 'OPTIONS') { res.writeHead(204, { 'Access-Control-Allow-Methods': 'GET' }); return res.end(); } }
   // Δοκιμές: ψεύτικο Apps Script (tools/mock-gas.js) στο /mock-api
   if (req.method === 'POST' && req.url === '/mock-api') {
     let body = '';

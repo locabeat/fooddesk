@@ -365,3 +365,100 @@ svg.chart .baseline { stroke-width: 1; }
 svg.chart .goal-line { stroke-width: 1.5; }
 svg.chart .wline, svg.chart .wdot { stroke-width: 2; }
 svg.chart .halo { paint-order: stroke; stroke: var(--card-solid); stroke-width: 3px; stroke-linejoin: round; }
+
+/* ---------- Βήμα 4: πρόγραμμα εβδομάδας ---------- */
+.plan-day.is-today { border-color: color-mix(in srgb, var(--green-2) 55%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--green-2) 25%, transparent), var(--shadow); }
+.plan-day.is-past { opacity: .72; }
+.plan-day h2 small { font-weight: 500; font-size: 12px; }
+.theme-chip { padding: 5px 10px; font-size: 12.5px; }
+.meter { height: 8px; border-radius: 999px; background: var(--chip); overflow: hidden; }
+.meter i { display: block; height: 100%; border-radius: 999px; background: var(--green-2); }
+.meter i.over { background: var(--over); }
+.plan-meal { display: grid; grid-template-columns: 116px 1fr; gap: 8px; align-items: start; padding: 7px 0; border-top: 1px solid var(--line); }
+.pm-name { font-size: 13px; font-weight: 600; color: var(--muted); padding-top: 5px; }
+.pm-items { display: flex; flex-wrap: wrap; gap: 6px; }
+.pm-item { border: 1px solid var(--card-border); background: var(--card-solid); border-radius: 10px; padding: 5px 9px; font-size: 13px; font-weight: 600; text-align: left; }
+.pm-item small { color: var(--muted); font-weight: 500; }
+.pm-item.done { background: var(--chip); color: var(--green-2); }
+.pm-add { border: 1px dashed var(--card-border); background: none; border-radius: 10px; width: 32px; height: 30px; font-size: 17px; color: var(--muted); }
+.pm-add:hover { background: var(--chip); color: var(--text); }
+.item.is-done .txt b { color: var(--muted); }
+.shop-row input { width: 18px; height: 18px; accent-color: var(--green-2); flex: none; }
+.shop-row:has(input:checked) .txt b { text-decoration: line-through; color: var(--muted); }
+@media (max-width: 400px) { .plan-meal { grid-template-columns: 92px 1fr; } }
+
+/* ---------- ημερολόγιο προγράμματος ---------- */
+.cap { text-transform: capitalize; }
+.cal { padding: 10px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-h { text-align: center; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; padding: 4px 0; }
+.cal-d { position: relative; min-height: 64px; border: 1px solid var(--card-border); background: var(--card-solid); border-radius: 12px; padding: 5px 4px 6px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.cal-d:hover { background: var(--chip-hover); }
+.cal-d.out { opacity: .4; }
+.cal-d.past { background: var(--chip); }
+.cal-d.today { border: 2px solid var(--green-2); }
+.cal-n { font-weight: 800; font-size: 14px; }
+.cal-d.today .cal-n { color: var(--green-2); }
+.cal-t { font-size: 15px; line-height: 1; min-height: 15px; }
+.cal-k { font-size: 10.5px; font-weight: 700; color: var(--muted); }
+.cal-m { width: 80%; height: 4px; border-radius: 999px; background: var(--chip); overflow: hidden; margin-top: auto; }
+.cal-m i { display: block; height: 100%; background: var(--green-2); }
+.cal-m i.over { background: var(--over); }
+.link-head { border: 0; background: none; padding: 0; text-align: left; }
+.link-head h2 { margin: 0; }
+@media (max-width: 400px) { .cal-d { min-height: 56px; } .cal-k { font-size: 9.5px; } }
+
+/* ---------- συνταγές με φωτογραφία / πηγή ---------- */
+.rec-photo { margin: 0 -18px 10px; }
+.rec-photo img { width: 100%; max-height: 260px; object-fit: cover; display: block; }
+.rec-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 2px; }
+.rec-meta span { background: var(--chip); border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 600; }
+.rec-src { margin: 6px 0 4px; }
+.rec-src a { color: var(--green-2); font-weight: 600; }
+.rec-card.has-photo { padding: 0; overflow: hidden; }
+.rec-card.has-photo b, .rec-card.has-photo small { padding: 0 12px; }
+.rec-card.has-photo small { padding-bottom: 12px; }
+.rec-thumb { width: 100%; height: 96px; object-fit: cover; display: block; margin-bottom: 4px; }
+
+/* ---------- εναλλακτικά υλικά ---------- */
+.alt-sel { font: inherit; border: 1px solid var(--card-border); background: var(--field); border-radius: 8px; padding: 3px 6px; max-width: 230px; color: var(--text); }
+.alt-sel.changed { border-color: var(--green-2); background: var(--chip); font-weight: 600; }
+.alt-ico { color: var(--green-2); font-size: 12px; }
+.swap-note b { color: var(--green-2); }
+
+/* Δέντρο κατηγοριών συνταγών */
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 4px 0 10px; }
+.crumb { border: 0; background: none; padding: 4px 6px; border-radius: 8px; font-weight: 600; font-size: 13px; color: var(--green-1); }
+.crumb:hover { background: var(--chip-hover); }
+.crumbs .crumb:last-child { color: inherit; }
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.cat-tile { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 12px 6px; border-radius: 16px;
+  border: 1px solid var(--card-border); background: var(--card-solid); text-align: center; }
+.cat-tile:hover { background: var(--chip-hover); }
+.cat-tile span { font-size: 24px; }
+.cat-tile b { font-size: 12.5px; line-height: 1.2; }
+.cat-tile small { font-size: 11px; color: var(--muted); }
+#rfTags { flex-wrap: wrap; }
+.rec-where { margin: 6px 0; }
+
+/* Σχόλια συνταγών & λογαριασμοί */
+.rec-by { margin: 2px 0 10px; }
+.comments { display: flex; flex-direction: column; gap: 8px; }
+.comment { background: var(--card-solid); border: 1px solid var(--card-border); border-radius: 14px; padding: 10px 12px; }
+.comment p { margin: 6px 0 0; white-space: pre-wrap; }
+.c-head { display: flex; align-items: center; gap: 8px; }
+.c-head small { margin-left: auto; }
+.c-del { border: 0; background: none; cursor: pointer; padding: 2px 4px; border-radius: 8px; font-size: 14px; }
+.c-del:hover { background: var(--chip-hover); }
+.c-photo { display: block; width: 100%; max-height: 360px; object-fit: cover; border-radius: 12px; margin-top: 8px; }
+.c-form { margin-top: 10px; }
+.c-form textarea { width: 100%; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--card-border); background: var(--field); color: inherit; font: inherit; resize: vertical; }
+.c-row { display: flex; gap: 8px; justify-content: space-between; align-items: center; margin-top: 8px; }
+.c-row label.btn { cursor: pointer; }
+.c-prev { position: relative; margin-top: 8px; }
+.c-prev img { display: block; max-width: 100%; max-height: 220px; border-radius: 12px; }
+.c-prev .c-del { position: absolute; top: 6px; right: 6px; background: var(--card-solid); }
+.empty.small { padding: 12px 10px; font-size: 13px; }
+.user-row { cursor: default; }
+.user-row:hover { background: none; }
+.u-acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }

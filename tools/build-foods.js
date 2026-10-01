@@ -61,6 +61,8 @@ for (const file of fs.readdirSync(srcDir).filter(f => f.endsWith('.txt')).sort()
 // Ποσότητα: «500» = γραμμάρια, «2 τεμ» = τεμάχια (η μερίδα με «*»), «3 κουταλιά» = μερίδα με αυτό το όνομα.
 const byName = new Map(foods.map(x => [x.name, x]));
 const recipes = [];
+// Ετικέτες συνταγών (ίδια λίστα με το TAGS του app.js).
+const TAG_KEYS = ['airfryer', 'quick', 'five', 'budget', 'kids', 'light', 'protein', 'fasting', 'vegan', 'onepan'];
 const recDir = path.join(root, 'data', 'recipes');
 for (const file of fs.readdirSync(recDir).filter(f => f.endsWith('.txt')).sort()) {
   let cat = null, rec = null;
@@ -79,6 +81,22 @@ for (const file of fs.readdirSync(recDir).filter(f => f.endsWith('.txt')).sort()
       return recipes.push(rec);
     }
     if (!rec) return errors.push(`${where}: γραμμή έξω από συνταγή`);
+    // «@ κλειδί: τιμή» — στοιχεία από την πηγή (πηγή, φωτογραφία, χρόνος, δυσκολία, μερίδες όπως τις γράφει).
+    if (line.startsWith('@ ')) {
+      const k = line.indexOf(':'), key = line.slice(2, k).trim(), val = line.slice(k + 1).trim();
+      if (key === 'κατηγορία') { rec.cat = val; return; }
+      if (key === 'ετικέτες') {
+        rec.tags = val.split(',').map(t => t.trim()).filter(Boolean);
+        const bad = rec.tags.filter(t => !TAG_KEYS.includes(t));
+        if (bad.length) errors.push(`${where}: άγνωστες ετικέτες ${bad.join(', ')}`);
+        return;
+      }
+      const map = { 'πηγή': 'source', 'φωτογραφία': 'photo', 'χρόνος': 'time', 'δυσκολία': 'difficulty', 'μερίδες': 'servingsText' };
+      if (!map[key]) return errors.push(`${where}: άγνωστο πεδίο «${key}»`);
+      rec.meta = rec.meta || {};
+      rec.meta[map[key]] = val;
+      return;
+    }
     if (line.startsWith('- ')) return rec.steps.push(line.slice(2));
     if (line.startsWith('! ')) return rec.notes.push(line.slice(2));
     const [fname, qtyS] = line.split('|').map(s => s.trim());
@@ -130,7 +148,7 @@ for (const s of lines('recipes.txt')) {
 for (const r of recipes) {
   if (!r.en) { errors.push(`EN: λείπει η συνταγή ${r.id} ${r.name}`); continue; }
   if (r.en.steps.length !== r.steps.length || r.en.notes.length !== r.notes.length) errors.push(`EN: η συνταγή ${r.id} έχει διαφορετικό πλήθος βημάτων/σημειώσεων`);
-  if (!enCat[r.cat]) errors.push(`EN: λείπει η κατηγορία συνταγής «${r.cat}»`);
+  for (const seg of r.cat.split('/')) if (!enCat[seg]) errors.push(`EN: λείπει η κατηγορία συνταγής «${seg}» (${r.cat})`);
 }
 fs.writeFileSync(path.join(root, 'data', 'i18n.json'), JSON.stringify({ cats: enCat }));
 
