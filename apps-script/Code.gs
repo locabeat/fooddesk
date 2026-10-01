@@ -10,7 +10,7 @@
  *  - Μετά από 5 λάθος κωδικούς ο λογαριασμός κλειδώνει για 15 λεπτά.
  *
  * Δεδομένα:
- *  - Προσωπικά (καταγραφές, νερό, βάρος, πρόγραμμα, συνδυασμοί, αγαπημένα, ρυθμίσεις): η καθεμία βλέπει μόνο τα δικά της.
+ *  - Προσωπικά (καταγραφές, νερό, βάρος, πρόγραμμα, συνδυασμοί, αγαπημένα, ρυθμίσεις, ψώνια): η καθεμία βλέπει μόνο τα δικά της.
  *  - Κοινά (τρόφιμα, συνταγές, σχόλια): τα βλέπουν όλες· αλλάζει/σβήνει μόνο όποια τα πρόσθεσε ή η διαχειρίστρια.
  *  - Οι φωτογραφίες των σχολίων ανεβαίνουν στο Google Drive της διαχειρίστριας (φάκελος «Food Desk — φωτογραφίες»).
  *
@@ -35,12 +35,14 @@ const SHEETS = {
     ['items', 'Δεδομένα (μην αλλάζεις)', 't'], USER_COL] },
   favs: { name: 'Αγαπημένα', cols: [['id', 'Κωδικός', 't'], ['name', 'Όνομα', 't'], USER_COL] },
   settings: { name: 'Ρυθμίσεις', cols: [['id', 'Ρύθμιση', 't'], ['value', 'Τιμή', 't'], USER_COL] },
+  shop: { name: 'Ψώνια', cols: [['id', 'ID', 't'], ['name', 'Όνομα', 't'], ['food', 'Κωδικός τροφίμου'], ['g', 'Γραμμάρια'], ['pieces', 'Τεμάχια'], ['pcsOnly', 'Μόνο τεμάχια'],
+    ['cat', 'Κατηγορία', 't'], ['checked', 'Στο καλάθι'], ['note', 'Σημείωση', 't'], ['src', 'Από (συνταγή/εβδομάδα)', 't'], USER_COL] },
   comments: { name: 'Σχόλια', cols: [['id', 'ID', 't'], ['recipe', 'Συνταγή'], ['user', 'Χρήστης', 't'], ['text', 'Σχόλιο', 't'], ['photo', 'Φωτογραφία', 't'], ['created', 'Ημερομηνία', 't']] },
   users: { name: 'Χρήστες', cols: [['id', 'ID', 't'], ['name', 'Όνομα', 't'], ['role', 'Ρόλος (admin/user)', 't'], ['status', 'Κατάσταση (pending/active/disabled)', 't'],
     ['hash', 'Αποτύπωμα κωδικού (όχι ο κωδικός)', 't'], ['salt', 'Salt', 't'], ['created', 'Δημιουργία', 't'], ['fails', 'Λάθος προσπάθειες'], ['lockUntil', 'Κλείδωμα έως (ms)'],
     ['mustChange', 'Πρέπει να αλλάξει κωδικό']] },
 };
-const PERSONAL = ['log', 'water', 'weight', 'plan', 'combos', 'favs', 'settings'];
+const PERSONAL = ['log', 'water', 'weight', 'plan', 'combos', 'favs', 'settings', 'shop'];
 const SHARED = ['foods', 'recipes'];
 
 function doGet() {
@@ -71,6 +73,7 @@ function doPost(e) {
         case 'upload':    res = upload_(me, p); break;
         case 'users':     res = adminUsers_(me); break;
         case 'setStatus': res = setStatus_(me, p); break;
+        case 'resetPin':  res = resetPin_(me, p); break;
         default: throw new Error('Άγνωστη ενέργεια');
       }
     }
@@ -213,6 +216,21 @@ function setStatus_(me, p) {
   put_('users', [{ id: u.id, status: p.status }]);
   if (p.status === 'disabled') revokeTokens_(u.id);
   return {};
+}
+
+/** Η διαχειρίστρια δίνει προσωρινό κωδικό σε όποια τον ξέχασε· στην πρώτη είσοδο αλλάζει υποχρεωτικά. */
+function resetPin_(me, p) {
+  if (!isAdmin_(me)) throw new Error('Μόνο για τη διαχειρίστρια');
+  const u = users_().find(x => String(x.id) === String(p.id));
+  if (!u) throw new Error('Δεν βρέθηκε ο λογαριασμός');
+  if (String(u.id) === String(me.id)) throw new Error('Τον δικό σου κωδικό τον αλλάζεις από τις Ρυθμίσεις');
+  const abc = 'abcdefghjkmnpqrstuvwxyz23456789', hex = Utilities.getUuid().replace(/-/g, '');
+  let pin = '';
+  for (let i = 0; i < 8; i++) pin += abc[parseInt(hex.substr(i * 2, 2), 16) % abc.length];
+  const salt = Utilities.getUuid();
+  put_('users', [{ id: u.id, hash: hash_(pin, salt), salt, mustChange: true, fails: 0, lockUntil: '' }]);
+  revokeTokens_(u.id);
+  return { pin, name: String(u.name) };
 }
 
 /** Τα δεδομένα από την εποχή πριν τους λογαριασμούς ανήκουν στη διαχειρίστρια. */

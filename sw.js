@@ -1,7 +1,7 @@
 // Κρατάει τα αρχεία του site για να ανοίγει γρήγορα και χωρίς internet.
 // Αλλάζεις τον αριθμό σε κάθε νέα έκδοση ώστε να ανανεωθεί η cache.
-const CACHE = 'fooddesk-v5';
-const ASSETS = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.json', 'icons/icon.svg', 'data/foods.json', 'data/recipes.json', 'data/i18n.json'];
+const CACHE = 'fooddesk-v6';
+const ASSETS = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png', 'icons/logo-192.png', 'data/foods.json', 'data/recipes.json', 'data/i18n.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS.map(a => new Request(a, { cache: 'reload' })))).then(() => self.skipWaiting()));

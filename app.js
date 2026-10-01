@@ -145,6 +145,7 @@ function freshData() {
     customRecipes: [], recipeEdits: {}, hiddenRecipes: [],
     users: [],        // λογαριασμοί της παρέας: { id, name, role } (μόνο ενεργοί)
     comments: [],     // σχόλια συνταγών (κοινά): { id, recipe, user, text, photo, created }
+    shop: [],         // λίστα για ψώνια (προσωπική): { id, food (id ή null), name, g, pieces, pcsOnly, cat, checked }
   };
 }
 // Παλιά αποθηκευμένα δεδομένα: συμπληρώνουμε ό,τι λείπει.
@@ -305,7 +306,7 @@ function recipeRowOut(id) {
     items: JSON.stringify(r.items.map(({ food, name, qty, unit, g }) => ({ food, name, qty, unit, g }))) };
 }
 const comboRowOut = c => ({ id: c.id, name: c.name, icon: c.icon, itemsText: c.items.map(e => `${e.name} (${fmt(e.kcal)} kcal)`).join('\n'), items: JSON.stringify(c.items) });
-const SET_NUM = ['kcalGoal', 'waterGoal', 'height', 'age', 'activity', 'targetKg'], SET_STR = ['sex', 'goalType', 'themes'];
+const SET_NUM = ['kcalGoal', 'waterGoal', 'height', 'age', 'activity', 'targetKg'], SET_STR = ['sex', 'goalType', 'themes', 'pantry', 'onboarded'];
 const settingsRows = () => [...SET_NUM, ...SET_STR].map(k => ({ id: k, value: String(data.settings[k] ?? '') }));
 const boolOf = v => v === true || String(v).toUpperCase() === 'TRUE';
 const numOf = v => typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.')) || 0;
@@ -324,6 +325,8 @@ function fromSheet(all) {
   d.log = all.log.map(r => ({ id: String(r.id), date: String(r.date), meal: r.meal, kind: r.kind, ref: r.kind === 'quick' ? null : numOf(r.ref),
     name: String(r.name), qty: numOf(r.qty), unit: String(r.unit), g: numOf(r.g), kcal: numOf(r.kcal), p: numOf(r.p), c: numOf(r.c), f: numOf(r.f) }));
   for (const r of all.water) d.water[String(r.id)] = numOf(r.glasses);
+  d.shop = (all.shop || []).map(r => ({ id: String(r.id), food: r.food === '' || r.food === null ? null : numOf(r.food), name: String(r.name), g: numOf(r.g), pieces: numOf(r.pieces),
+    pcsOnly: boolOf(r.pcsOnly), cat: String(r.cat || ''), checked: boolOf(r.checked), note: String(r.note || ''), src: String(r.src || '').split(',').filter(Boolean) }));
   d.users = (all.users || []).map(u => ({ id: String(u.id), name: String(u.name), role: String(u.role) }));
   d.comments = (all.comments || []).map(c => ({ id: String(c.id), recipe: numOf(c.recipe), user: String(c.user), text: String(c.text || ''), photo: String(c.photo || ''), created: String(c.created || '') }))
     .sort((a, b) => a.created.localeCompare(b.created));
@@ -391,6 +394,7 @@ async function doRefresh() {
     ui.pending = all.pending || 0;
     if (isAdmin() && ui.pending && ui.pendingSeen !== ui.pending) { ui.pendingSeen = ui.pending; setTimeout(() => toast(pendingText()), 2600); }
     if (me()?.mustChange && !ui.pinAsked) { ui.pinAsked = true; openChangePin(true); }
+    else if (needsWelcome() && !ui.welcomed && $('#overlay').classList.contains('hidden')) { ui.welcomed = true; openWelcome(); }
     return true;
   } catch (e) {
     if (e.message === 'Χρειάζεται σύνδεση') { logout(); toast(errText(e.message)); }
@@ -437,6 +441,7 @@ function render() {
   const out = !cfg;
   document.body.classList.toggle('logged-out', out);
   $('#refreshBtn').hidden = !online();
+  $('#shopBtn').hidden = out;
   if (out) return renderLogin($('#view'));
   $$('.tabbar [data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === ui.tab));
   const labels = { today: T('Σήμερα', 'Today'), progress: T('Πρόοδος', 'Progress'), recipes: T('Συνταγές', 'Recipes'), plan: T('Πρόγραμμα', 'Plan') };
@@ -444,6 +449,7 @@ function render() {
   $('#settingsBtn').setAttribute('aria-label', T('Ρυθμίσεις', 'Settings'));
   $$('.tabbar [data-label]').forEach(s => { s.textContent = labels[s.dataset.label]; });
   document.documentElement.lang = LANG;
+  updateShopBadge();
   const v = $('#view');
   ({ today: renderToday, progress: renderProgress, recipes: renderRecipes, plan: renderPlan, settings: renderSettings })[ui.tab](v);
 }
@@ -1040,8 +1046,8 @@ function swapItem(it, food) {
 
 /* ---------- σχόλια συνταγών (κοινά για την παρέα, με φωτογραφία) ---------- */
 const commentCount = id => (data.comments || []).filter(c => c.recipe === id).length;
-// Μικραίνει τη φωτογραφία πριν ανέβει (≈ 150–300 KB αντί για αρκετά MB από το κινητό).
-function shrinkImage(file, max = 1280) {
+// Μικραίνει τη φωτογραφία πριν ανέβει (≈ 80–150 KB αντί για αρκετά MB από το κινητό).
+function shrinkImage(file, max = 1000) {
   return new Promise((resolve, reject) => {
     const img = new Image(), url = URL.createObjectURL(file);
     img.onload = () => {
@@ -1050,7 +1056,7 @@ function shrinkImage(file, max = 1280) {
       c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
       URL.revokeObjectURL(url);
-      resolve(c.toDataURL('image/jpeg', 0.82));
+      resolve(c.toDataURL('image/jpeg', 0.76));
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(T('Δεν διαβάστηκε η φωτογραφία', 'Could not read the photo'))); };
     img.src = url;
@@ -1066,6 +1072,7 @@ function commentsHtml(r, st) {
           ${c.user === me()?.id || isAdmin() ? `<button class="c-del" data-cdel="${esc(c.id)}" aria-label="${T('Διαγραφή σχολίου', 'Delete comment')}">🗑</button>` : ''}</div>
         ${c.text ? `<p>${esc(c.text)}</p>` : ''}
         ${c.photo ? `<img class="c-photo" src="${esc(c.photo)}" alt="${T('Φωτογραφία από', 'Photo by')} ${esc(userName(c.user))}" loading="lazy" referrerpolicy="no-referrer">` : ''}
+        ${c.uploading ? `<small class="muted">⏳ ${T('ανεβαίνει…', 'uploading…')}</small>` : ''}
       </div>`).join('') : `<div class="empty small">${T('Κανένα σχόλιο ακόμα. Την έφτιαξες; Πες πώς βγήκε ή ανέβασε φωτογραφία! 📷', 'No comments yet. Did you make it? Say how it went or upload a photo! 📷')}</div>`}</div>
     <div class="c-form">
       <textarea id="cText" rows="2" maxlength="1500" placeholder="${T('Γράψε ένα σχόλιο ή μια συμβουλή…', 'Write a comment or a tip…')}">${esc(st.cText || '')}</textarea>
@@ -1073,7 +1080,7 @@ function commentsHtml(r, st) {
       <div class="c-row">
         <label class="btn small" for="cFile">📷 ${st.cPhoto ? T('Άλλη φωτογραφία', 'Another photo') : T('Φωτογραφία', 'Photo')}</label>
         <input type="file" id="cFile" accept="image/*" hidden>
-        <button class="btn small primary" id="cSend" ${st.cBusy ? 'disabled' : ''}>${st.cBusy ? T('Στέλνω… ⏳', 'Sending… ⏳') : T('Αποστολή', 'Send')}</button>
+        <button class="btn small primary" id="cSend">${T('Αποστολή', 'Send')}</button>
       </div>
     </div>`;
 }
@@ -1089,18 +1096,24 @@ function wireComments(body, r, st, redraw) {
   $('#cSend', body).onclick = async () => {
     const text = (st.cText || '').trim();
     if (!text && !st.cPhoto) return toast(T('Γράψε κάτι ή βάλε φωτογραφία', 'Write something or add a photo'));
-    const c = { id: newId(), recipe: r.id, user: me()?.id || 'demo', text, photo: '', created: new Date().toISOString() };
-    if (online()) {
-      st.cBusy = true; redraw();
-      try {
-        if (st.cPhoto) c.photo = (await api('upload', { data: st.cPhoto.split(',')[1] })).url;
-        await api('put', { sheet: 'comments', rows: [{ id: c.id, recipe: c.recipe, text: c.text, photo: c.photo }] });
-      } catch (err) { st.cBusy = false; redraw(); return toast(errText(err.message)); }
-    } else c.photo = st.cPhoto || '';
-    data.comments.push(c); save();
-    Object.assign(st, { cText: '', cPhoto: null, cBusy: false });
-    redraw(); toast(T('Το σχόλιο δημοσιεύτηκε ✓', 'Comment posted ✓'));
+    // Το σχόλιο φαίνεται αμέσως· η φωτογραφία ανεβαίνει στο παρασκήνιο (η Google θέλει λίγα δευτερόλεπτα).
+    const photo = st.cPhoto;
+    const c = { id: newId(), recipe: r.id, user: me()?.id || 'demo', text, photo: photo || '', created: new Date().toISOString(), uploading: online() };
+    data.comments.push(c);
+    Object.assign(st, { cText: '', cPhoto: null });
+    redraw();
     if (ui.tab === 'recipes') render();
+    if (!online()) { save(); return toast(T('Το σχόλιο δημοσιεύτηκε ✓', 'Comment posted ✓')); }
+    const again = () => { if (body.isConnected) redraw(); if (ui.tab === 'recipes') render(); };
+    try {
+      if (photo) c.photo = (await api('upload', { data: photo.split(',')[1] })).url;
+      await api('put', { sheet: 'comments', rows: [{ id: c.id, recipe: c.recipe, text: c.text, photo: c.photo }] });
+      delete c.uploading; save(); again();
+      toast(T('Το σχόλιο δημοσιεύτηκε ✓', 'Comment posted ✓'));
+    } catch (err) {
+      data.comments = data.comments.filter(x => x !== c); again();
+      toast(T('Δεν στάλθηκε το σχόλιο', 'The comment was not sent') + ': ' + errText(err.message));
+    }
   };
   $$('[data-cdel]', body).forEach(b => b.onclick = () => {
     if (!confirm(T('Να διαγραφεί το σχόλιο;', 'Delete this comment?'))) return;
@@ -1147,7 +1160,7 @@ function openRecipe(base) {
       <h3 class="section-label">${T('Εκτέλεση', 'Method')}</h3>
       <ol class="steps">${recipeSteps(r).map(s => `<li>${esc(s)}</li>`).join('')}</ol>
       <div class="actions">
-        <button class="btn" id="rShop" title="${T('Έρχεται: θα στέλνει τα υλικά στα Ψώνια του Household Desk', 'Coming soon: sends the ingredients to Household Desk shopping')}" disabled>🛒 ${T('Στα ψώνια', 'To shopping')}</button>
+        <button class="btn" id="rShop">🛒 ${T('Στα ψώνια', 'To shopping')}</button>
         <button class="btn primary" id="rAte">🍽️ ${T('Το έφαγα', 'I ate this')}</button>
       </div>
       ${commentsHtml(base, st)}`;
@@ -1159,6 +1172,8 @@ function openRecipe(base) {
     const reset = $('#sReset', body);
     if (reset) reset.onclick = e => { e.preventDefault(); setServ(r.servings); };
     $('#rAte', body).onclick = () => openPortion({ recipe: r, meal: mealByTime(), day: todayIso() });
+    $('#rShop', body).onclick = () => openShopPicker(`🛒 ${recipeName(r)}`, recipeShopCands(r, k),
+      T(`Υλικά για ${st.serv} ${st.serv === 1 ? 'μερίδα' : 'μερίδες'}.`, `Ingredients for ${st.serv} serving${st.serv === 1 ? '' : 's'}.`), `r:${base.id}`);
     $('#rFav', body).onclick = () => { toggleFav(favKey); draw(); if (ui.tab === 'recipes') render(); };
     if ($('#rEdit', body)) $('#rEdit', body).onclick = () => openRecipeForm(recipeFormState(r));
     $$('[data-alt]', body).forEach(sel => sel.onchange = () => {
@@ -1508,11 +1523,13 @@ function calcGoal(s, kg) {
   const raw = tdee + adj;
   return { bmr: Math.round(bmr), tdee: Math.round(tdee), goal: Math.max(floor, Math.round(raw / 10) * 10), floored: raw < floor, floor };
 }
-function openGoalCalc() {
+/** wiz: μέσα στον οδηγό καλωσορίσματος ({ step, back, next }). */
+function openGoalCalc(wiz) {
   const s = { ...data.settings };
   const lastKg = data.weights[data.weights.length - 1]?.kg || 0;
-  const body = openSheet(T('🧮 Υπολογισμός στόχου', '🧮 Goal calculator'));
+  const body = openSheet(wiz ? wiz.step : T('🧮 Υπολογισμός στόχου', '🧮 Goal calculator'));
   body.innerHTML = `
+    ${wiz ? `<p class="small muted" style="margin-top:0">${T('Με αυτά υπολογίζω πόσες θερμίδες χρειάζεσαι τη μέρα. Τα βλέπεις μόνο εσύ και τα αλλάζεις όποτε θες από τις Ρυθμίσεις.', 'I use these to work out how many calories you need a day. Only you can see them and you can change them anytime in Settings.')}</p>` : ''}
     <div class="row2">
       <label class="field"><span>${T('Ύψος (εκ.)', 'Height (cm)')}</span><input id="gH" inputmode="numeric" value="${s.height || ''}" placeholder="165"></label>
       <label class="field"><span>${T('Ηλικία', 'Age')}</span><input id="gA" inputmode="numeric" value="${s.age || ''}" placeholder="30"></label>
@@ -1524,7 +1541,7 @@ function openGoalCalc() {
     <label class="field"><span>${T('Κιλά-στόχος (προαιρετικά, για το γράφημα)', 'Target weight (optional, for the chart)')}</span><input id="gT" inputmode="decimal" value="${s.targetKg || ''}"></label>
     <div class="calc-out" id="gOut"></div>
     <p class="small muted">${T('Υπολογισμός Mifflin–St Jeor: μια καλή εκτίμηση για να ξεκινήσεις, όχι ιατρική συμβουλή. Αν μετά από 2–3 εβδομάδες το βάρος δεν κινείται όπως θέλεις, άλλαξε τον στόχο κατά ±100–200 kcal.', 'Mifflin–St Jeor formula: a good starting estimate, not medical advice. If your weight is not moving as you want after 2–3 weeks, adjust the goal by ±100–200 kcal.')}</p>
-    <div class="actions"><button class="btn" id="gNo">${T('Κλείσιμο', 'Close')}</button><button class="btn primary" id="gOk" disabled>${T('Βάλ\' το ως στόχο', 'Set as my goal')}</button></div>`;
+    <div class="actions">${wiz ? `<button class="btn" id="gNo">← ${T('Πίσω', 'Back')}</button><button class="btn" id="gSkip">${T('Αργότερα', 'Later')}</button>` : `<button class="btn" id="gNo">${T('Κλείσιμο', 'Close')}</button>`}<button class="btn primary" id="gOk" disabled>${wiz ? T('Συνέχεια →', 'Next →') : T('Βάλ\' το ως στόχο', 'Set as my goal')}</button></div>`;
   const read = () => {
     s.height = parseFloat($('#gH', body).value) || 0; s.age = parseFloat($('#gA', body).value) || 0;
     s.activity = parseFloat($('#gAct', body).value); s.goalType = $('#gGoal', body).value;
@@ -1544,7 +1561,8 @@ function openGoalCalc() {
   };
   $$('input, select', body).forEach(el => el.oninput = draw);
   $$('#gS button', body).forEach(b => b.onclick = () => { s.sex = b.dataset.s; draw(); });
-  $('#gNo', body).onclick = closeSheet;
+  $('#gNo', body).onclick = wiz ? wiz.back : closeSheet;
+  if (wiz) $('#gSkip', body).onclick = wiz.next;
   $('#gOk', body).onclick = () => {
     const kgv = read();
     Object.assign(data.settings, { height: s.height, age: s.age, sex: s.sex, activity: s.activity, goalType: s.goalType, targetKg: s.targetKg, kcalGoal: res.goal });
@@ -1552,7 +1570,8 @@ function openGoalCalc() {
     if (kgv > 20 && !data.weights.some(w => w.date === todayIso()) && kgv !== data.weights[data.weights.length - 1]?.kg) {
       data.weights.push({ date: todayIso(), kg: Math.round(kgv * 10) / 10 }); push('weight', [{ id: todayIso(), kg: Math.round(kgv * 10) / 10 }]);
     }
-    save(); push('settings', settingsRows()); closeSheet(); render();
+    save(); push('settings', settingsRows());
+    if (wiz) { render(); wiz.next(); } else { closeSheet(); render(); }
     toast(T(`Νέος στόχος: ${fmt(res.goal)} kcal ✓`, `New goal: ${fmt(res.goal)} kcal ✓`));
   };
   draw();
@@ -1849,7 +1868,7 @@ function copyLastWeek(days) {
 function weekShoppingList(days) {
   const sum = new Map();
   const addFood = (food, g, pieces) => {
-    if (!food || /Αλάτι/.test(food.name) || food.name === 'Νερό') return;
+    if (!food || food.name === 'Νερό') return;
     const s = sum.get(food.id) || { food, g: 0, pieces: 0, pieceOnly: true };
     s.g += g;
     if (pieces) s.pieces += pieces; else s.pieceOnly = false;
@@ -1861,15 +1880,30 @@ function weekShoppingList(days) {
       const r = recipeById(p.ref);
       if (!r) continue;
       const k = p.qty / r.servings;
-      for (const it of r.items) addFood(foodById(it.food), it.g * k, it.unit === 'τεμ' ? it.qty * k : 0);
+      for (const it of r.items) addFood(foodById(it.food), it.g * k, isPieceUnit(it.unit) ? it.qty * k : 0);
     } else if (p.kind === 'food') addFood(foodById(p.ref), p.g, 0);
   }
   return [...sum.values()].sort((a, b) => a.food.cat.localeCompare(b.food.cat) || foodName(a.food).localeCompare(foodName(b.food)));
 }
+// Συσκευασία του τροφίμου (κονσέρβα, πακέτο, κεσεδάκι…), αν υπάρχει στις μερίδες του.
+const PACK_RE = /^(1 )?(κονσέρβα|συσκευασία|πακέτο|κεσεδάκι|μπουκάλι|σακουλάκι|κουτί)/;
+const packOf = food => food.portions.find(p => PACK_RE.test(p.name) && !/στραγγ|μικρ|μεγάλ/.test(p.name));
 function shopAmount(s) {
+  if (!(s.pieceOnly && s.pieces)) {
+    // Λίγα γραμμάρια (μυρωδικά, πελτές…) δεν βοηθάνε στα ψώνια: μόνο το όνομα.
+    if (s.g < 30) return '';
+    const pack = packOf(s.food);
+    if (pack && s.g >= pack.g * 0.5) {
+      const n = Math.max(1, Math.ceil(s.g / pack.g - 0.05)), pn = portionName(s.food, pack.name).replace(/^1 /, '');
+      const exact = Math.abs(s.g - n * pack.g) <= pack.g * 0.05;
+      return `${n === 1 ? `1 ${pn}` : `${n} × ${pn}`}${exact ? '' : ` (${niceGrams(s.g)} ${G()})`}`;
+    }
+  }
   if (s.pieceOnly && s.pieces) {
     const piece = s.food.portions.find(p => p.piece);
-    return `${Math.ceil(s.pieces - 0.01)} × ${portionName(s.food, piece?.name || '').replace(/^1 /, '')}`;
+    const n = Math.ceil(s.pieces - 0.01), pn = portionName(s.food, piece?.name || '').replace(/^1 /, '');
+    // «μεσαίο/μεγάλο…» δεν λέει τίποτα στη λίστα· γράφουμε τεμάχια.
+    return /^(μικρ|μεσαί|μεγάλ|small|medium|large)/i.test(pn) || !pn ? `${n} ${T('τεμ.', 'pcs')}` : `${n} × ${pn}`;
   }
   return s.g >= 1000 ? `${(Math.ceil(s.g / 50) * 50 / 1000).toLocaleString(LOCALE())} kg` : `${niceGrams(s.g)} ${G()}`;
 }
@@ -1880,15 +1914,217 @@ function openWeekShopping(days) {
   body.innerHTML = list.length ? `
     <p class="small muted" style="margin-top:0">${T('Από τις συνταγές και τα φαγητά του προγράμματος (από σήμερα και μετά, όσα δεν έχεις φάει ακόμα). Τα ποσά είναι αθροισμένα.', 'From the recipes and foods in your plan (from today on, not yet eaten). Amounts are added up.')}</p>
     <div class="list flat">${list.map(s => `<label class="item shop-row"><input type="checkbox"><span class="txt"><b>${esc(foodName(s.food))}</b></span><span class="muted">${esc(shopAmount(s))}</span></label>`).join('')}</div>
-    <div class="actions"><button class="btn" id="wsCopy">📋 ${T('Αντιγραφή', 'Copy')}</button><button class="btn primary" id="wsHH">🏠 ${T('Στο Household Desk', 'To Household Desk')}</button></div>`
+    <div class="actions"><button class="btn" id="wsCopy">📋 ${T('Αντιγραφή', 'Copy')}</button><button class="btn primary" id="wsHH">🛒 ${T('Όλα στα ψώνια', 'All to shopping')}</button></div>`
     : `<div class="empty">${T('Βάλε συνταγές στο πρόγραμμα της εβδομάδας και εδώ θα βγαίνει η λίστα με τα υλικά.', 'Add recipes to the week plan and the ingredient list will show up here.')}</div>`;
   const c = $('#wsCopy', body);
   if (c) c.onclick = async () => { try { await navigator.clipboard.writeText(text); toast(T('Αντιγράφηκε ✓', 'Copied ✓')); } catch { toast(T('Δεν έγινε αντιγραφή', 'Could not copy')); } };
   const hh = $('#wsHH', body);
-  if (hh) hh.onclick = () => sendToHousehold(list.map(s => ({ name: foodName(s.food), qty: shopAmount(s) })));
+  if (hh) hh.onclick = () => openShopPicker(`🛒 ${T('Ψώνια εβδομάδας', 'Week shopping')}`,
+    list.map(s => ({ food: s.food, g: s.g, pieces: s.pieceOnly ? s.pieces : 0, pcsOnly: s.pieceOnly && s.pieces > 0 })), '', `w:${days[0]}`);
 }
-// Στέλνεται στα Ψώνια του Household Desk (στήνεται στο επόμενο βήμα).
-function sendToHousehold() { toast(T('Έρχεται στο επόμενο βήμα 🙂', 'Coming in the next step 🙂')); }
+
+/* ============ 🛒 λίστα για το σούπερ μάρκετ (προσωπική για την καθεμία) ============ */
+// Με τη σειρά των διαδρόμων, για να μην πηγαινοέρχεσαι στο μαγαζί.
+const AISLES = ['Λαχανικά', 'Φρούτα', 'Κρέας & πουλερικά', 'Ψάρια & θαλασσινά', 'Αυγά', 'Γαλακτοκομικά & τυριά', 'Ψωμί, ζυμαρικά, ρύζι, δημητριακά', 'Όσπρια',
+  'Λάδια, λίπη & ξηροί καρποί', 'Σάλτσες, αλείμματα & υλικά', 'Καφέδες & ροφήματα', 'Χυμοί & αναψυκτικά', 'Αλκοόλ', 'Γλυκά & σνακ'];
+// «Πάντα έχω στο σπίτι»: μπαίνουν ξετσεκαρισμένα όταν στέλνεις υλικά στη λίστα. Αρχικά: αλάτι/πιπέρι, ελαιόλαδο, ζάχαρη, αλεύρι, ξίδι.
+const DEFAULT_PANTRY = ['Αλάτι / Πιπέρι / Μπαχαρικά', 'Ελαιόλαδο', 'Ζάχαρη', 'Αλεύρι για όλες τις χρήσεις', 'Ξίδι'];
+function pantry() {
+  try { const p = JSON.parse(data.settings.pantry || 'null'); if (Array.isArray(p)) return p; } catch { /* παλιό/άδειο */ }
+  return DEFAULT_PANTRY.map(n => BASE_FOODS.find(f => f.name === n)?.id).filter(Boolean);
+}
+function setPantry(ids) { data.settings.pantry = JSON.stringify([...new Set(ids)]); save(); push('settings', settingsRows()); }
+const inPantry = id => pantry().includes(id);
+const shopRowOut = s => ({ id: s.id, food: s.food ?? '', name: s.name, g: Math.round(s.g || 0), pieces: Math.round((s.pieces || 0) * 100) / 100, pcsOnly: !!s.pcsOnly, cat: s.cat || '', checked: !!s.checked,
+  note: s.note || '', src: (s.src || []).join(',') });
+const shopName = s => { const f = s.food ? foodById(s.food) : null; return f ? foodName(f) : s.name; };
+function shopRowAmount(s) {
+  const food = s.food ? foodById(s.food) : null;
+  const amount = food && s.g > 0 ? shopAmount({ food, g: s.g, pieces: s.pieces, pieceOnly: s.pcsOnly }) : '';
+  return [amount, s.note].filter(Boolean).join(' · ');
+}
+function updateShopBadge() {
+  const n = (data?.shop || []).filter(s => !s.checked).length, b = $('#shopCount');
+  if (b) { b.hidden = !n; b.textContent = n > 99 ? '99+' : n; }
+}
+// Μπαίνει στη λίστα· αν υπάρχει ήδη το ίδιο τρόφιμο (όχι τσεκαρισμένο), αθροίζονται οι ποσότητες.
+// src: από πού ήρθε (π.χ. «r:49» για συνταγή), για να καταλαβαίνουμε αν μπαίνει κάτι δεύτερη φορά.
+function addToShop(entries, src) {
+  const changed = [];
+  for (const e of entries) {
+    const food = e.food ? foodById(e.food) : null;
+    let s = food && data.shop.find(x => x.food === food.id && !x.checked);
+    if (s) {
+      s.g = (s.g || 0) + (e.g || 0);
+      s.pieces = (s.pieces || 0) + (e.pieces || 0);
+      s.pcsOnly = (s.pcsOnly || !s.g) && !!e.pcsOnly;
+    } else {
+      const name = food ? food.name : String(e.name || '').trim();
+      if (!name) continue;
+      s = { id: newId(), food: food ? food.id : null, name, g: e.g || 0, pieces: e.pieces || 0, pcsOnly: !!e.pcsOnly, cat: food ? food.cat : '', checked: false, note: '', src: [] };
+      data.shop.push(s);
+    }
+    if (src && !(s.src || []).includes(src)) s.src = [...(s.src || []), src];
+    if (!changed.includes(s)) changed.push(s);
+  }
+  if (!changed.length) return 0;
+  save(); push('shop', changed.map(shopRowOut)); updateShopBadge();
+  return changed.length;
+}
+// Για τα ψώνια μετράμε σε τεμάχια ό,τι γράφει η συνταγή σε τεμάχια ή «μεγέθη» (1 μεσαίο κρεμμύδι → 1 τεμ.), όχι κουταλιές/μερίδες.
+const isPieceUnit = u => u === 'τεμ' || (u && u !== 'γρ' && !/κουταλ|φλιτζ|ποτήρ|μερίδ|πρέζα|συσκευασ|πακέτο|κονσέρβα|ματσάκι|χούφτα|μπολ|φέτα/.test(u));
+/** Τα υλικά μιας συνταγής για k φορές τη συνταγή (ενωμένα αν ένα υλικό υπάρχει σε δύο γραμμές). */
+function recipeShopCands(r, k) {
+  const m = new Map();
+  for (const it of r.items) {
+    const food = foodById(it.food);
+    if (!food || food.name === 'Νερό') continue;
+    const c = m.get(food.id) || { food, g: 0, pieces: 0, pcsOnly: true };
+    c.g += it.g * k;
+    if (isPieceUnit(it.unit)) c.pieces += it.qty * k; else c.pcsOnly = false;
+    m.set(food.id, c);
+  }
+  return [...m.values()].map(c => ({ ...c, pcsOnly: c.pcsOnly && c.pieces > 0 }));
+}
+/** Πριν μπουν στη λίστα: όλα τσεκαρισμένα, εκτός από όσα «πάντα έχω στο σπίτι» 🏠. */
+function openShopPicker(title, cands, note, src) {
+  if (!cands.length) return toast(T('Δεν υπάρχουν υλικά για τη λίστα', 'No ingredients to add'));
+  // Αν η ίδια συνταγή/εβδομάδα είναι ήδη στη λίστα, ρωτάμε (για να μη διπλασιαστούν οι ποσότητες από λάθος).
+  if (src && data.shop.some(s => !s.checked && (s.src || []).includes(src))
+    && !confirm(T('Αυτά είναι ήδη στη λίστα για ψώνια. Να ξαναμπούν (οι ποσότητες θα προστεθούν);', 'These are already on the shopping list. Add them again (amounts will be added up)?'))) return;
+  const st = cands.map(c => ({ ...c, on: !inPantry(c.food.id) }));
+  const body = openSheet(title);
+  const draw = () => {
+    body.innerHTML = `
+      <p class="small muted" style="margin-top:0">${note ? esc(note) + ' ' : ''}${T('Ξετσέκαρε όσα έχεις ήδη στο σπίτι. Όσα έχουν 🏠 είναι στα «Πάντα έχω» και είναι ήδη ξετσεκαρισμένα· πάτα το 🏠 για να το αλλάξεις.', 'Untick what you already have at home. Items with 🏠 are in “Always have” and start unticked; tap 🏠 to change that.')}</p>
+      <div class="list flat">${st.map((c, i) => `
+        <div class="item shop-row">
+          <label class="shop-lbl"><input type="checkbox" data-i="${i}" ${c.on ? 'checked' : ''}><span class="txt"><b>${esc(foodName(c.food))}</b><small>${esc(shopAmount({ food: c.food, g: c.g, pieces: c.pieces, pieceOnly: c.pcsOnly }))}</small></span></label>
+          <button class="pantry-tog ${inPantry(c.food.id) ? 'on' : ''}" data-p="${i}" title="${T('Πάντα έχω στο σπίτι', 'Always have at home')}" aria-label="${T('Πάντα έχω στο σπίτι', 'Always have at home')}">🏠</button>
+        </div>`).join('')}</div>
+      <div class="actions"><button class="btn" id="spNo">${T('Άκυρο', 'Cancel')}</button><button class="btn primary" id="spOk">🛒 ${T('Πρόσθεσε', 'Add')} (${st.filter(c => c.on).length})</button></div>`;
+    $$('[data-i]', body).forEach(cb => cb.onchange = () => {
+      st[+cb.dataset.i].on = cb.checked;
+      $('#spOk', body).textContent = `🛒 ${T('Πρόσθεσε', 'Add')} (${st.filter(c => c.on).length})`;
+    });
+    $$('[data-p]', body).forEach(b => b.onclick = () => {
+      const c = st[+b.dataset.p], ids = pantry(), had = ids.includes(c.food.id);
+      setPantry(had ? ids.filter(x => x !== c.food.id) : [...ids, c.food.id]);
+      c.on = had; // μόλις μπήκε στα «Πάντα έχω» → ξετσεκάρεται, και αντίστροφα
+      toast(had ? T(`«${foodName(c.food)}» βγήκε από τα «Πάντα έχω»`, `“${foodName(c.food)}” removed from “Always have”`) : T(`🏠 «${foodName(c.food)}»: πάντα έχω στο σπίτι`, `🏠 “${foodName(c.food)}”: always have at home`));
+      draw();
+    });
+    $('#spNo', body).onclick = closeSheet;
+    $('#spOk', body).onclick = () => {
+      const n = addToShop(st.filter(c => c.on).map(c => ({ food: c.food.id, g: c.g, pieces: c.pieces, pcsOnly: c.pcsOnly })), src);
+      closeSheet();
+      toast(n ? T(`🛒 ${n} στη λίστα για ψώνια`, `🛒 ${n} added to the shopping list`) : T('Δεν προστέθηκε τίποτα', 'Nothing added'));
+    };
+  };
+  draw();
+}
+/** Η λίστα: ανά διάδρομο, τσεκάρισμα στο καλάθι, προσθήκη με αναζήτηση ή ελεύθερο κείμενο. */
+function openShopList() {
+  const body = openSheet(`🛒 ${T('Λίστα για ψώνια', 'Shopping list')}`);
+  let q = '';
+  const groupsOf = items => {
+    const g = new Map();
+    for (const s of items) { const k = AISLES.includes(s.cat) ? s.cat : s.cat ? s.cat : ''; if (!g.has(k)) g.set(k, []); g.get(k).push(s); }
+    const rank = k => (k === '' ? 999 : AISLES.includes(k) ? AISLES.indexOf(k) : 500);
+    return [...g.entries()].sort((a, b) => rank(a[0]) - rank(b[0])).map(([k, xs]) => [k, xs.sort((a, b) => shopName(a).localeCompare(shopName(b)))]);
+  };
+  const row = s => `
+    <div class="item shop-row">
+      <label class="shop-lbl"><input type="checkbox" data-sc="${esc(s.id)}" ${s.checked ? 'checked' : ''}><span class="txt"><b>${esc(shopName(s))}</b>${shopRowAmount(s) ? `<small>${esc(shopRowAmount(s))}</small>` : ''}</span></label>
+      <button class="c-del" data-se="${esc(s.id)}" aria-label="${T('Ποσότητα ή σημείωση', 'Amount or note')}" title="${T('Ποσότητα ή σημείωση', 'Amount or note')}">✎</button>
+      <button class="c-del" data-sx="${esc(s.id)}" aria-label="${T('Αφαίρεση', 'Remove')}">✕</button>
+    </div>`;
+  const asText = () => groupsOf(data.shop.filter(s => !s.checked)).map(([k, xs]) => `${k ? (CAT_ICONS[k] || '') + ' ' + catName(k) : '📦 ' + T('Άλλα', 'Other')}\n${xs.map(s => `• ${shopName(s)}${shopRowAmount(s) ? ' — ' + shopRowAmount(s) : ''}`).join('\n')}`).join('\n\n');
+  const sugg = () => {
+    const f = fold(q.trim());
+    if (!f) return '';
+    const hits = FOODS.filter(x => fold(foodName(x)).includes(f)).sort((a, b) => fold(foodName(a)).indexOf(f) - fold(foodName(b)).indexOf(f)).slice(0, 6);
+    return `<div class="list flat shop-sugg">${hits.map(x => `<button class="item" data-sf="${x.id}"><span class="ico">${CAT_ICONS[x.cat] || '🛒'}</span><span class="txt"><b>${esc(foodName(x))}</b></span><span class="muted">+</span></button>`).join('')}
+      <button class="item" id="shFree"><span class="ico">✏️</span><span class="txt"><b>${T('Πρόσθεσε', 'Add')} «${esc(q.trim())}»</b><small>${T('ως ελεύθερο κείμενο', 'as free text')}</small></span><span class="muted">+</span></button></div>`;
+  };
+  const draw = () => {
+    const open = data.shop.filter(s => !s.checked), done = data.shop.filter(s => s.checked);
+    body.innerHTML = `
+      <div class="search" style="margin-top:0"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="shQ" value="${esc(q)}" autocomplete="off" placeholder="${T('Πρόσθεσε… (π.χ. γάλα, χαρτί κουζίνας)', 'Add… (e.g. milk, kitchen paper)')}"></div>
+      <div id="shSug">${sugg()}</div>
+      ${!data.shop.length ? `<div class="empty">${T('Η λίστα είναι άδεια. Πρόσθεσε από πάνω, ή πάτα «🛒 Στα ψώνια» σε μια συνταγή ή στο πρόγραμμα της εβδομάδας.', 'The list is empty. Add above, or tap “🛒 To shopping” on a recipe or in the week plan.')}</div>` : ''}
+      ${groupsOf(open).map(([k, xs]) => `<h3 class="section-label">${k ? `${CAT_ICONS[k] || '🛒'} ${esc(catName(k))}` : `📦 ${T('Άλλα', 'Other')}`}</h3><div class="list flat">${xs.map(row).join('')}</div>`).join('')}
+      ${done.length ? `<h3 class="section-label">✅ ${T('Στο καλάθι', 'In the basket')} (${done.length})</h3><div class="list flat shop-done">${done.map(row).join('')}</div>` : ''}
+      ${data.shop.length ? `<div class="actions wrap">
+        ${done.length ? `<button class="btn" id="shClear">🧹 ${T('Καθάρισε τα τσεκαρισμένα', 'Clear ticked')}</button>` : ''}
+        ${open.length ? `<button class="btn" id="shCopy">📋 ${T('Αντιγραφή', 'Copy')}</button><button class="btn primary" id="shShare">📤 ${T('Στείλε', 'Send')}</button>` : ''}
+      </div>` : ''}
+      <div class="shop-foot"><button class="link-btn" id="shPantry">🏠 ${T('Πάντα έχω στο σπίτι', 'Always have at home')} (${pantry().length})</button>
+        ${data.shop.length ? `<button class="link-btn" id="shAll">🗑 ${T('Άδειασε τη λίστα', 'Empty the list')}</button>` : ''}</div>`;
+    const inp = $('#shQ', body);
+    inp.oninput = () => { q = inp.value; $('#shSug', body).innerHTML = sugg(); wireSugg(); };
+    inp.onkeydown = e => { if (e.key === 'Enter' && q.trim()) { const first = $('[data-sf]', body); first ? first.click() : $('#shFree', body)?.click(); } };
+    wireSugg();
+    $$('[data-sc]', body).forEach(cb => cb.onchange = () => {
+      const s = data.shop.find(x => x.id === cb.dataset.sc);
+      s.checked = cb.checked; save(); push('shop', [shopRowOut(s)]); updateShopBadge(); draw();
+    });
+    $$('[data-se]', body).forEach(b => b.onclick = () => {
+      const s = data.shop.find(x => x.id === b.dataset.se);
+      const v = prompt(T(`Ποσότητα ή σημείωση για «${shopName(s)}» (π.χ. 2 λίτρα, το light):`, `Amount or note for “${shopName(s)}” (e.g. 2 litres, the light one):`), s.note || '');
+      if (v === null) return;
+      s.note = v.trim().slice(0, 80); save(); push('shop', [shopRowOut(s)]); draw();
+    });
+    $$('[data-sx]', body).forEach(b => b.onclick = () => {
+      data.shop = data.shop.filter(x => x.id !== b.dataset.sx); save(); drop('shop', [b.dataset.sx]); updateShopBadge(); draw();
+    });
+    const clr = $('#shClear', body);
+    if (clr) clr.onclick = () => { const ids = done.map(s => s.id); data.shop = data.shop.filter(s => !s.checked); save(); drop('shop', ids); updateShopBadge(); draw(); };
+    const all = $('#shAll', body);
+    if (all) all.onclick = () => {
+      if (!confirm(T('Να σβηστεί όλη η λίστα για ψώνια;', 'Delete the whole shopping list?'))) return;
+      drop('shop', data.shop.map(s => s.id)); data.shop = []; save(); updateShopBadge(); draw();
+    };
+    const copy = async () => { try { await navigator.clipboard.writeText(asText()); toast(T('Αντιγράφηκε ✓', 'Copied ✓')); } catch { toast(T('Δεν έγινε αντιγραφή', 'Could not copy')); } };
+    const cp = $('#shCopy', body);
+    if (cp) cp.onclick = copy;
+    const sh = $('#shShare', body);
+    if (sh) sh.onclick = async () => {
+      if (!navigator.share) return copy();
+      try { await navigator.share({ title: T('Λίστα για ψώνια', 'Shopping list'), text: asText() }); } catch { /* ακύρωση */ }
+    };
+    $('#shPantry', body).onclick = () => openPantry(openShopList);
+  };
+  const wireSugg = () => {
+    $$('[data-sf]', body).forEach(b => b.onclick = () => { addToShop([{ food: +b.dataset.sf }]); q = ''; draw(); $('#shQ', body).focus(); });
+    const fr = $('#shFree', body);
+    if (fr) fr.onclick = () => { addToShop([{ name: q.trim() }]); q = ''; draw(); $('#shQ', body).focus(); };
+  };
+  draw();
+}
+/** «🏠 Πάντα έχω στο σπίτι»: όσα δεν μπαίνουν (τσεκαρισμένα) στη λίστα όταν στέλνεις υλικά. */
+function openPantry(back) {
+  const body = openSheet(`🏠 ${T('Πάντα έχω στο σπίτι', 'Always have at home')}`);
+  let q = '';
+  const draw = () => {
+    const ids = pantry(), f = fold(q.trim());
+    const hits = f ? FOODS.filter(x => !ids.includes(x.id) && fold(foodName(x)).includes(f)).slice(0, 6) : [];
+    body.innerHTML = `
+      <p class="small muted" style="margin-top:0">${T('Αυτά τα έχεις σχεδόν πάντα. Όταν στέλνεις υλικά από συνταγή ή πρόγραμμα στη λίστα, θα είναι ήδη ξετσεκαρισμένα (αν τελείωσε κάτι, απλά το τσεκάρεις εκείνη τη φορά).', "You almost always have these. When you send ingredients from a recipe or the plan, they start unticked (if one runs out, just tick it that time).")}</p>
+      <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="pnQ" value="${esc(q)}" autocomplete="off" placeholder="${T('Πρόσθεσε… (π.χ. ρίγανη, ρύζι)', 'Add… (e.g. oregano, rice)')}"></div>
+      ${hits.length ? `<div class="list flat">${hits.map(x => `<button class="item" data-pa="${x.id}"><span class="txt"><b>${esc(foodName(x))}</b></span><span class="muted">+</span></button>`).join('')}</div>` : ''}
+      <div class="list flat" style="margin-top:10px">${ids.length ? ids.map(id => foodById(id)).filter(Boolean).map(x => `<div class="item shop-row"><span class="txt"><b>🏠 ${esc(foodName(x))}</b></span><button class="c-del" data-pr="${x.id}" aria-label="${T('Αφαίρεση', 'Remove')}">✕</button></div>`).join('') : `<div class="empty small">${T('Άδειο', 'Empty')}</div>`}</div>
+      ${back ? `<div class="actions"><button class="btn" id="pnBack">← ${T('Πίσω στη λίστα', 'Back to the list')}</button></div>` : ''}`;
+    const inp = $('#pnQ', body);
+    inp.oninput = () => { q = inp.value; draw(); const i = $('#pnQ', body); i.focus(); i.setSelectionRange(q.length, q.length); };
+    $$('[data-pa]', body).forEach(b => b.onclick = () => { setPantry([...pantry(), +b.dataset.pa]); q = ''; draw(); });
+    $$('[data-pr]', body).forEach(b => b.onclick = () => { setPantry(pantry().filter(x => x !== +b.dataset.pr)); draw(); });
+    const bk = $('#pnBack', body);
+    if (bk) bk.onclick = back;
+  };
+  draw();
+}
 
 /* ---------- ρυθμίσεις ---------- */
 function renderSettings(v) {
@@ -1928,13 +2164,18 @@ function renderSettings(v) {
            <button class="btn" id="sOut">${T('Έξοδος από τη δοκιμή', 'Exit demo')}</button>`}
     </section>
     <section class="card">
+      <h2>❓ ${T('Βοήθεια', 'Help')}</h2>
+      <button class="btn block" id="sGuide">👋 ${T('Οδηγός: τι κάνει η εφαρμογή & τι χρειάζεται να ξέρεις', 'Guide: what the app does & good to know')}</button>
+    </section>
+    <section class="card">
       <h2>📚 ${T('Βάση', 'Database')}</h2>
       <p class="muted small" style="margin-top:0">${FOODS.length} ${T('τρόφιμα', 'foods')} · ${RECIPES.length} ${T('συνταγές', 'recipes')}</p>
       <button class="btn danger block" id="sReset">${T('Σβήσε όλες τις καταγραφές', 'Delete all entries')}</button>
     </section>`;
   const num = (id, key, min, max) => { $(id, v).onchange = e => { const n = parseInt(e.target.value, 10); if (n >= min && n <= max) { s[key] = n; save(); push('settings', settingsRows()); toast(T('Αποθηκεύτηκε ✓', 'Saved ✓')); } else e.target.value = s[key]; }; };
   $$('#sLang button', v).forEach(b => b.onclick = () => setLang(b.dataset.l));
-  $('#sCalc', v).onclick = openGoalCalc;
+  $('#sCalc', v).onclick = () => openGoalCalc();
+  $('#sGuide', v).onclick = () => openWelcome();
   num('#sKcal', 'kcalGoal', 800, 6000);
   num('#sWater', 'waterGoal', 1, 30);
   const mine = [
@@ -1986,7 +2227,7 @@ function renderLogin(v) {
   const up = ui.loginMode === 'up';
   v.innerHTML = `
     <div class="login">
-      <div class="login-logo">🥗</div>
+      <img class="login-logo" src="icons/logo-192.png" alt="">
       <h1>Food Desk</h1>
       <p class="muted">${up ? T('Φτιάξε λογαριασμό · θα μπορείς να μπεις μόλις τον εγκρίνει η διαχειρίστρια', 'Create an account · you can sign in once the admin approves it') : T('Μπες με το όνομα και τον κωδικό σου', 'Sign in with your name and password')}</p>
       ${ui.signupDone ? `<div class="note">✅ ${T('Η αίτησή σου στάλθηκε! Μόλις την εγκρίνει η διαχειρίστρια, θα μπορείς να μπεις με το όνομα και τον κωδικό σου.', 'Your request was sent! Once the admin approves it, you can sign in with your name and password.')}</div>` : ''}
@@ -2004,6 +2245,7 @@ function renderLogin(v) {
         </details>
         <button class="btn primary block" id="lgGo">${up ? T('Αίτηση εγγραφής', 'Request an account') : T('Είσοδος', 'Sign in')}</button>
       </section>
+      ${up ? '' : `<p class="small muted">${T('Ξέχασες τον κωδικό; Ζήτα από τη διαχειρίστρια έναν προσωρινό.', 'Forgot your password? Ask the admin for a temporary one.')}</p>`}
       <button class="link-btn" id="lgMode">${up ? T('Έχω ήδη λογαριασμό · Είσοδος', 'I have an account · Sign in') : T('Δεν έχεις λογαριασμό; Εγγραφή', 'No account yet? Sign up')}</button>
       <div><button class="link-btn" id="lgDemo">${T('Δοκιμή με ψεύτικα δεδομένα', 'Try with sample data')}</button></div>
       <div><button class="link-btn" id="lgLang">${T('🇬🇧 English', '🇬🇷 Ελληνικά')}</button></div>
@@ -2042,7 +2284,7 @@ function renderLogin(v) {
     // Μέσα αμέσως· τα δεδομένα φορτώνουν στο παρασκήνιο (η Google μπορεί να αργήσει).
     queue = []; store.set('food.queue', []);
     data = freshData(); save(); rebuildCatalog();
-    ui.tab = 'today'; ui.day = todayIso(); ui.signupDone = false; ui.pinAsked = false; render();
+    ui.tab = 'today'; ui.day = todayIso(); ui.signupDone = false; ui.pinAsked = false; ui.welcomed = false; render();
     toast(T(`Καλώς ήρθες, ${me().name}! 🥗 Φορτώνω τα δεδομένα σου…`, `Welcome, ${me().name}! 🥗 Loading your data…`));
     refresh().then(ok => { if (ok) toast(T('Όλα ενημερωμένα ✓', 'All up to date ✓')); });
   };
@@ -2054,13 +2296,15 @@ function renderLogin(v) {
   };
 }
 
-/** Αλλαγή κωδικού. forced: η πρώτη φορά της διαχειρίστριας (ο παλιός PIN είναι μικρός). */
+/** Αλλαγή κωδικού. forced: μετά από προσωρινό κωδικό (ή η πρώτη φορά της διαχειρίστριας, με τον παλιό μικρό PIN). */
 function openChangePin(forced) {
   const min = isAdmin() ? 8 : 6;
   const body = openSheet(T('Αλλαγή κωδικού', 'Change password'));
   body.innerHTML = `
-    ${forced ? `<div class="note">🔐 ${T('Είσαι η διαχειρίστρια, οπότε βάλε έναν νέο, μεγαλύτερο κωδικό (τουλάχιστον 8 χαρακτήρες). Ιδανικά μια φράση με γράμματα και αριθμούς, που δεν χρησιμοποιείς αλλού.', "You're the admin, so set a new, longer password (at least 8 characters). Ideally a phrase with letters and numbers that you don't use anywhere else.")}</div>` : ''}
-    <label class="field"><span>${T('Τωρινός κωδικός', 'Current password')}</span><input id="cpOld" type="password" autocomplete="current-password"></label>
+    ${forced ? `<div class="note">🔐 ${isAdmin()
+      ? T('Είσαι η διαχειρίστρια, οπότε βάλε έναν νέο, μεγαλύτερο κωδικό (τουλάχιστον 8 χαρακτήρες). Ιδανικά μια φράση με γράμματα και αριθμούς, που δεν χρησιμοποιείς αλλού.', "You're the admin, so set a new, longer password (at least 8 characters). Ideally a phrase with letters and numbers that you don't use anywhere else.")
+      : T('Μπήκες με προσωρινό κωδικό. Βάλε τώρα έναν δικό σου (τουλάχιστον 6 χαρακτήρες), που δεν χρησιμοποιείς αλλού.', "You signed in with a temporary password. Now set your own (at least 6 characters), one you don't use anywhere else.")}</div>` : ''}
+    <label class="field"><span>${forced && !isAdmin() ? T('Ο προσωρινός κωδικός', 'The temporary password') : T('Τωρινός κωδικός', 'Current password')}</span><input id="cpOld" type="password" autocomplete="current-password"></label>
     <label class="field"><span>${T(`Νέος κωδικός (τουλάχιστον ${min} χαρακτήρες)`, `New password (at least ${min} characters)`)}</span><input id="cpNew" type="password" autocomplete="new-password"></label>
     <label class="field"><span>${T('Νέος κωδικός ξανά', 'New password again')}</span><input id="cpNew2" type="password" autocomplete="new-password"></label>
     <div class="actions">${forced ? '' : `<button class="btn" id="cpNo">${T('Άκυρο', 'Cancel')}</button>`}<button class="btn primary" id="cpOk">${T('Αλλαγή', 'Change')}</button></div>`;
@@ -2073,6 +2317,7 @@ function openChangePin(forced) {
       const res = await api('changePin', { oldPin: o, newPin: a });
       cfg.me = res.me; store.set('food.cfg', cfg);
       closeSheet(); toast(T('Ο κωδικός άλλαξε ✓ · βγήκες από τις άλλες συσκευές', 'Password changed ✓ · signed out of your other devices'));
+      if (forced && needsWelcome() && !ui.welcomed) { ui.welcomed = true; openWelcome(); }
     } catch (e) { toast(errText(e.message)); }
   };
 }
@@ -2085,7 +2330,7 @@ async function openAdmin() {
   try { list = await api('users'); } catch (e) { body.innerHTML = `<div class="empty">${esc(errText(e.message))}</div>`; return; }
   const ACT = {
     pending: u => `<button class="mini-btn" data-act="active" data-u="${u.id}">✅ ${T('Έγκριση', 'Approve')}</button><button class="mini-btn" data-act="delete" data-u="${u.id}">❌ ${T('Απόρριψη', 'Reject')}</button>`,
-    active: u => `<button class="mini-btn" data-act="disabled" data-u="${u.id}">⛔ ${T('Απενεργοποίηση', 'Disable')}</button>`,
+    active: u => `<button class="mini-btn" data-reset="${u.id}">🔑 ${T('Προσωρινός κωδικός', 'Temporary password')}</button><button class="mini-btn" data-act="disabled" data-u="${u.id}">⛔ ${T('Απενεργοποίηση', 'Disable')}</button>`,
     disabled: u => `<button class="mini-btn" data-act="active" data-u="${u.id}">↩️ ${T('Ενεργοποίηση', 'Enable')}</button><button class="mini-btn" data-act="delete" data-u="${u.id}">🗑 ${T('Διαγραφή', 'Delete')}</button>`,
   };
   const TITLES = { pending: T('⏳ Αιτήσεις', '⏳ Requests'), active: T('✅ Ενεργοί λογαριασμοί', '✅ Active accounts'), disabled: T('⛔ Απενεργοποιημένοι', '⛔ Disabled') };
@@ -2111,8 +2356,80 @@ async function openAdmin() {
         draw(); refresh();
       } catch (e) { b.disabled = false; toast(errText(e.message)); }
     });
+    $$('[data-reset]', body).forEach(b => b.onclick = async () => {
+      const u = list.find(x => x.id === b.dataset.reset);
+      if (!confirm(T(`Νέος προσωρινός κωδικός για τη «${u.name}»; Ο παλιός της σταματά να ισχύει και βγαίνει από όλες τις συσκευές.`, `New temporary password for “${u.name}”? Her old one stops working and she is signed out everywhere.`))) return;
+      b.disabled = true;
+      let res;
+      try { res = await api('resetPin', { id: u.id }); } catch (e) { b.disabled = false; return toast(errText(e.message)); }
+      const msg = T(`Ο προσωρινός κωδικός σου για το Food Desk είναι: ${res.pin}\nΜπες με το όνομα «${res.name}» και θα σου ζητήσει να βάλεις δικό σου.\n${location.origin + location.pathname}`,
+        `Your temporary Food Desk password is: ${res.pin}\nSign in with the name “${res.name}” and you'll be asked to set your own.\n${location.origin + location.pathname}`);
+      body.innerHTML = `
+        <p style="margin-top:0">${T(`Ο προσωρινός κωδικός της «${esc(res.name)}»:`, `Temporary password for “${esc(res.name)}”:`)}</p>
+        <div class="temp-pin">${esc(res.pin)}</div>
+        <p class="small muted">${T('Στείλ\' τον της (π.χ. σε μήνυμα). Τον βλέπεις μόνο τώρα· μόλις μπει, θα της ζητήσει να βάλει δικό της κωδικό.', "Send it to her (e.g. in a message). You only see it now; once she signs in she'll be asked to set her own.")}</p>
+        <div class="actions wrap"><button class="btn" id="rpBack">← ${T('Πίσω', 'Back')}</button><button class="btn" id="rpCopy">📋 ${T('Αντιγραφή', 'Copy')}</button>${navigator.share ? `<button class="btn primary" id="rpShare">📤 ${T('Στείλε', 'Send')}</button>` : ''}</div>`;
+      $('#rpBack', body).onclick = draw;
+      $('#rpCopy', body).onclick = async () => { try { await navigator.clipboard.writeText(msg); toast(T('Αντιγράφηκε ✓', 'Copied ✓')); } catch { toast(T('Δεν έγινε αντιγραφή', 'Could not copy')); } };
+      const sh = $('#rpShare', body);
+      if (sh) sh.onclick = async () => { try { await navigator.share({ text: msg }); } catch { /* ακύρωση */ } };
+    });
   };
   draw();
+}
+
+/* ---------- οδηγός καλωσορίσματος (πρώτη είσοδος · ξανανοίγει από τις Ρυθμίσεις) ---------- */
+const needsWelcome = () => online() && !me()?.mustChange && data.settings.onboarded !== '1';
+function openWelcome(step = 0) {
+  const N = 4, title = (i, t) => `${t} · ${i + 1}/${N}`;
+  const li = (ico, html) => `<li><span class="w-ico">${ico}</span><span>${html}</span></li>`;
+  const nav = (back, nextLabel) => `<div class="actions">${back ? `<button class="btn" id="wBack">← ${T('Πίσω', 'Back')}</button>` : ''}<button class="btn primary" id="wNext">${nextLabel}</button></div>`;
+  const go = i => openWelcome(i);
+  if (step === 1) return openGoalCalc({ step: title(1, T('📏 Τα στοιχεία σου', '📏 About you')), back: () => go(0), next: () => go(2) });
+  const admin = adminName();
+  const pages = [
+    [T(`👋 Καλώς ήρθες, ${me()?.name || ''}!`, `👋 Welcome, ${me()?.name || ''}!`), `
+      <p style="margin-top:0">${T('Το <b>Food Desk</b> είναι ένα ημερολόγιο φαγητού για την παρέα μας. Δες τι κάνει:', '<b>Food Desk</b> is a food diary for our group. Here is what it does:')}</p>
+      <ul class="w-list">
+        ${li('🍽️', T('<b>Γράφεις τι έφαγες</b> και μετράει θερμίδες, πρωτεΐνη, υδατάνθρακες, λιπαρά, και το νερό σου.', '<b>Log what you eat</b> and it counts calories, protein, carbs, fat, and your water.'))}
+        ${li('📖', T('<b>Κοινές συνταγές</b> με θερμίδες ανά μερίδα: όσες περνάμε εμείς και όσες προσθέτει η καθεμία. Σχόλια, φωτογραφίες, ⭐ αγαπημένες.', '<b>Shared recipes</b> with calories per serving: ones we add and ones each of us adds. Comments, photos, ⭐ favourites.'))}
+        ${li('📅', T('<b>Πρόγραμμα εβδομάδας</b>: σχεδιάζεις τι θα φας, και βλέπεις από πριν τις θερμίδες της μέρας.', '<b>Week plan</b>: plan what you will eat and see the day’s calories in advance.'))}
+        ${li('🛒', T('<b>Λίστα για ψώνια</b>: στέλνεις τα υλικά μιας συνταγής ή όλης της εβδομάδας με ένα κουμπί.', '<b>Shopping list</b>: send a recipe’s or the whole week’s ingredients with one tap.'))}
+        ${li('📈', T('<b>Πρόοδος</b>: βάρος, γράφημα, και πώς πας σε σχέση με τον στόχο σου.', '<b>Progress</b>: weight, chart, and how you are doing against your goal.'))}
+      </ul>
+      <p class="small muted">${T('Τρία σύντομα βήματα και είσαι έτοιμη.', 'Three short steps and you are ready.')}</p>
+      ${nav(false, T('Ξεκίνα →', 'Start →'))}`],
+    null,
+    [T('💡 Τι χρειάζεται να ξέρεις', '💡 Good to know'), `
+      <ul class="w-list">
+        ${li('🔒', T(`<b>Τα δικά σου</b> (τι έφαγες, πρόγραμμα, βάρος, ψώνια, αγαπημένα) δεν τα βλέπουν οι άλλες μέσα στην εφαρμογή. Σώζονται στο Google Sheet της διαχειρίστριας${admin ? ` (${esc(admin)})` : ''}, που τεχνικά μπορεί να τα δει εκεί.`, `<b>Your own data</b> (what you ate, plan, weight, shopping, favourites) is not visible to the others in the app. It is saved in the admin’s Google Sheet${admin ? ` (${esc(admin)})` : ''}, who can technically see it there.`))}
+        ${li('👭', T('<b>Κοινά για όλες</b>: συνταγές και τρόφιμα που προσθέτεις, σχόλια και φωτογραφίες, με το όνομά σου δίπλα.', '<b>Shared with everyone</b>: recipes and foods you add, comments and photos, with your name next to them.'))}
+        ${li('🔢', T('Οι θερμίδες είναι <b>εκτιμήσεις</b> (αλλάζουν με τη μάρκα και την ποσότητα). Είναι βοήθημα, όχι ιατρική συμβουλή· για θέματα υγείας ρώτα γιατρό ή διαιτολόγο.', 'Calories are <b>estimates</b> (they vary by brand and amount). This is a helper, not medical advice; for health issues ask a doctor or dietitian.'))}
+        ${li('📴', T('Δουλεύει και <b>χωρίς internet</b>· ό,τι γράψεις στέλνεται μόλις ξανασυνδεθείς.', 'It works <b>offline</b> too; whatever you enter is sent once you are back online.'))}
+        ${li('🔑', T('Ξέχασες τον κωδικό; Ζήτα από τη διαχειρίστρια <b>προσωρινό κωδικό</b>· με αυτόν μπαίνεις και βάζεις καινούργιο.', 'Forgot your password? Ask the admin for a <b>temporary password</b>; you sign in with it and set a new one.'))}
+        ${li('📷', T('Οι συνταγές του Άκη Πετρετζίκη έχουν τη φωτογραφία του και link στη σελίδα του· οι θερμίδες είναι υπολογισμένες από εμάς.', 'Akis Petretzikis recipes show his photo and a link to his page; the calories are our own calculation.'))}
+      </ul>
+      ${nav(true, T('Συνέχεια →', 'Next →'))}`],
+    [T('🚀 Πώς ξεκινάς', '🚀 How to start'), `
+      <ul class="w-list">
+        ${li('➕', T('Πάτα το <b>πράσινο +</b> κάτω στη μέση, ψάξε το φαγητό και διάλεξε ποσότητα.', 'Tap the <b>green +</b> at the bottom, search for the food and pick an amount.'))}
+        ${li('🕒', T('Στο <b>Σήμερα</b> βλέπεις πόσες θερμίδες σού μένουν και τα ποτήρια νερού.', 'On <b>Today</b> you see the calories you have left and your glasses of water.'))}
+        ${li('📖', T('Σε μια συνταγή: <b>☆</b> για αγαπημένη, <b>🍽️ Το έφαγα</b> για να γραφτεί, <b>🛒 Στα ψώνια</b> για τα υλικά, και σχόλιο με φωτογραφία κάτω κάτω.', 'In a recipe: <b>☆</b> to favourite, <b>🍽️ I ate this</b> to log it, <b>🛒 To shopping</b> for the ingredients, and a comment with a photo at the bottom.'))}
+        ${li('📲', T('<b>Βάλ\' το στην αρχική οθόνη</b> για να ανοίγει σαν εφαρμογή: iPhone (Safari) → κουμπί Κοινοποίησης → «Προσθήκη στην οθόνη Αφετηρίας». Android (Chrome) → ⋮ → «Εγκατάσταση εφαρμογής».', '<b>Add it to your home screen</b> so it opens like an app: iPhone (Safari) → Share → “Add to Home Screen”. Android (Chrome) → ⋮ → “Install app”.'))}
+        ${li('❓', T('Αυτόν τον οδηγό τον ξαναβρίσκεις στις <b>Ρυθμίσεις</b>.', 'You can find this guide again in <b>Settings</b>.'))}
+      </ul>
+      ${nav(true, T('Πάμε! 🎉', "Let's go! 🎉"))}`],
+  ];
+  const [t, html] = pages[step];
+  const body = openSheet(title(step, t));
+  body.innerHTML = html;
+  const back = $('#wBack', body);
+  if (back) back.onclick = () => go(step - 1);
+  $('#wNext', body).onclick = () => {
+    if (step < N - 1) return go(step + 1);
+    if (data.settings.onboarded !== '1') { data.settings.onboarded = '1'; save(); push('settings', settingsRows()); }
+    closeSheet(); render();
+  };
 }
 
 /* ---------- sheet & toast ---------- */
@@ -2163,6 +2480,7 @@ async function init() {
   $('#addBtn').onclick = () => openAdd(mealByTime(), ui.tab === 'today' ? ui.day : todayIso());
   $('#sheetClose').onclick = closeSheet;
   $('#settingsBtn').onclick = () => { ui.tab = 'settings'; render(); scrollTo(0, 0); };
+  $('#shopBtn').onclick = openShopList;
   $('#overlay').onclick = e => { if (e.target.id === 'overlay') closeSheet(); };
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
   $('#refreshBtn').onclick = async () => { if (await refresh()) toast(T('Ενημερώθηκε ✓', 'Updated ✓')); };
